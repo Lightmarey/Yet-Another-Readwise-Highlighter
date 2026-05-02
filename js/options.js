@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS = {
   enableToolbar: true,
   checkPageStatus: true,
   openSavedInReader: true,
+  quickSaveSelection: false,
   defaultColor: 'yellow',
   defaultLocation: 'new'
 };
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const enableToolbarCheckbox = document.getElementById('enableToolbar');
   const checkStatusCheckbox = document.getElementById('checkPageStatus');
   const openSavedCheckbox = document.getElementById('openSavedInReader');
+  const quickSaveCheckbox = document.getElementById('quickSaveSelection');
   const defaultColorSelect = document.getElementById('defaultColor');
   const defaultLocationSelect = document.getElementById('defaultLocation');
   const saveButton = document.getElementById('save');
@@ -26,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enableToolbarCheckbox.checked = settings.enableToolbar;
     checkStatusCheckbox.checked = settings.checkPageStatus;
     openSavedCheckbox.checked = settings.openSavedInReader;
+    quickSaveCheckbox.checked = settings.quickSaveSelection;
     defaultColorSelect.value = settings.defaultColor;
     defaultLocationSelect.value = settings.defaultLocation;
   });
@@ -38,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       enableToolbar: enableToolbarCheckbox.checked,
       checkPageStatus: checkStatusCheckbox.checked,
       openSavedInReader: openSavedCheckbox.checked,
+      quickSaveSelection: quickSaveCheckbox.checked,
       defaultColor: defaultColorSelect.value,
       defaultLocation: defaultLocationSelect.value
     };

@@ -7,13 +7,14 @@
   let settings = {
     enableFAB: true,
     enableToolbar: true,
-    defaultColor: 'yellow'
+    defaultColor: 'yellow',
+    quickSaveSelection: false
   };
 
   // --- Core Initialization ---
 
   function init() {
-    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultColor'], (data) => {
+    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultColor', 'quickSaveSelection'], (data) => {
       Object.assign(settings, data);
       updateUI();
     });
@@ -187,7 +188,7 @@
       dot.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        handleHighlightAction(color);
+        handleHighlightAction('highlight', color);
       });
       toolbar.appendChild(dot);
     });
@@ -203,49 +204,80 @@
     noteBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      handleHighlightAction(settings.defaultColor, true);
+      handleHighlightAction('note', settings.defaultColor);
     });
-    
     toolbar.appendChild(noteBtn);
+
+    const readerBtn = document.createElement('button');
+    readerBtn.className = 'rw-btn';
+    readerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
+    readerBtn.title = 'Save Selection to Reader';
+    readerBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleHighlightAction('reader');
+    });
+    toolbar.appendChild(readerBtn);
+    
     root.appendChild(toolbar);
     return toolbar;
   }
 
-  function handleHighlightAction(color, withNote = false) {
+  function handleHighlightAction(mode, color, withNote = false) {
     if (!activeSelection) return;
 
-    const { text, range, rect } = activeSelection;
+    const { text, range, rect, html } = activeSelection;
     hideToolbar();
 
-    if (withNote) {
-      showNoteUI(rect, '', (note) => {
-        executeSaveHighlight(text, range, color, note);
+    if (mode === 'reader' && settings.quickSaveSelection) {
+      executeSaveToReaderHtml(html, text, range, [], '', false);
+      return;
+    }
+
+    if (mode === 'note' || mode === 'reader') {
+      showNoteUI(rect, { mode, existingNote: '', existingTags: [] }, (data) => {
+        if (mode === 'note') {
+          executeSaveHighlight(text, range, color, data.note);
+        } else {
+          executeSaveToReaderHtml(html, text, range, data.tags, data.note, true);
+        }
       });
     } else {
       executeSaveHighlight(text, range, color);
     }
   }
 
-  function showNoteUI(rect, existingNote, onSave) {
+  function showNoteUI(rect, options, onSave) {
     const root = createShadowRoot();
     const noteContainer = document.createElement('div');
     noteContainer.className = 'rw-note-container';
     
+    let tagInput = null;
+    if (options.mode === 'reader') {
+      tagInput = document.createElement('input');
+      tagInput.type = 'text';
+      tagInput.placeholder = 'Tags (comma separated)...';
+      tagInput.className = 'rw-tag-input';
+      tagInput.value = (options.existingTags || []).join(', ');
+      noteContainer.appendChild(tagInput);
+    }
+
     const textarea = document.createElement('textarea');
-    textarea.placeholder = 'Add a note...';
+    textarea.placeholder = options.mode === 'reader' ? 'Add a note...' : 'Add highlight note...';
     textarea.className = 'rw-note-input';
-    textarea.value = existingNote || '';
+    textarea.value = options.existingNote || '';
+    noteContainer.appendChild(textarea);
     
     const saveBtn = document.createElement('button');
     saveBtn.className = 'rw-btn rw-btn-primary';
-    saveBtn.textContent = 'Save Note';
+    saveBtn.textContent = options.mode === 'reader' ? 'Save to Reader' : 'Save Note';
     saveBtn.onclick = () => {
       const note = textarea.value.trim();
-      onSave(note);
+      const tags = tagInput ? tagInput.value.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+      onSave({ note, tags });
       noteContainer.remove();
     };
 
-    noteContainer.appendChild(textarea);
     noteContainer.appendChild(saveBtn);
     
     const scrollX = window.scrollX || window.pageXOffset;
@@ -255,7 +287,7 @@
     noteContainer.style.top = `${rect.bottom + scrollY + 10}px`;
     
     root.appendChild(noteContainer);
-    setTimeout(() => textarea.focus(), 50);
+    setTimeout(() => (tagInput || textarea).focus(), 50);
 
     const dismisser = (e) => {
       const path = e.composedPath();
@@ -298,6 +330,37 @@
     });
   }
 
+  function executeSaveToReaderHtml(html, text, range, tags, notes, shouldMark = true, existingMark = null) {
+    showNotification('Saving selection to Reader...', 'loading');
+    playSound('select');
+
+    chrome.runtime.sendMessage({
+      action: 'save-reader-html',
+      data: {
+        url: window.location.href,
+        html: html,
+        title: document.title,
+        tags: tags,
+        notes: notes
+      }
+    }, (response) => {
+      if (response && response.success) {
+        showNotification('Selection saved to Reader!', 'success');
+        playSound('saved');
+        if (existingMark) {
+          updateExistingReaderSave(existingMark, tags, notes);
+        } else if (shouldMark) {
+          applyReaderSaveHighlight(range, response.id, tags, notes);
+        }
+        activeSelection = null;
+      } else {
+        const errorMsg = response ? response.error : 'API Request Failed';
+        showNotification(`Error: ${errorMsg}`, 'error');
+        playSound('error');
+      }
+    });
+  }
+
   function applyVisualHighlight(range, color, id, note) {
     try {
       const mark = document.createElement('mark');
@@ -319,6 +382,24 @@
     }
   }
 
+  function applyReaderSaveHighlight(range, id, tags, notes) {
+    try {
+      const mark = document.createElement('mark');
+      mark.className = 'rw-reader-save';
+      if (id) mark.setAttribute('data-reader-id', id);
+      if (tags) mark.setAttribute('data-tags', JSON.stringify(tags));
+      if (notes) mark.setAttribute('data-notes', notes);
+      
+      const contents = range.extractContents();
+      mark.appendChild(contents);
+      range.insertNode(mark);
+      
+      window.getSelection().removeAllRanges();
+    } catch (e) {
+      console.error('Reader save failed:', e);
+    }
+  }
+
   function updateExistingHighlight(mark, note) {
     if (note) {
       mark.setAttribute('data-has-note', 'true');
@@ -327,6 +408,11 @@
       mark.removeAttribute('data-has-note');
       mark.removeAttribute('data-note-text');
     }
+  }
+
+  function updateExistingReaderSave(mark, tags, notes) {
+    if (tags) mark.setAttribute('data-tags', JSON.stringify(tags));
+    if (notes) mark.setAttribute('data-notes', notes);
   }
 
   function getHexColor(color) {
@@ -341,7 +427,7 @@
     return map[color] || map.yellow;
   }
 
-  // --- Highlight Context Menu (Cancel/Delete/Note) ---
+  // --- Context Menu Logic ---
 
   function showHighlightActions(mark, rect) {
     const root = createShadowRoot();
@@ -355,8 +441,8 @@
     noteBtn.onclick = () => {
       actionMenu.remove();
       const existingNote = mark.getAttribute('data-note-text') || '';
-      showNoteUI(rect, existingNote, (note) => {
-        executeSaveHighlight(mark.textContent, null, null, note, mark);
+      showNoteUI(rect, { mode: 'note', existingNote }, (data) => {
+        executeSaveHighlight(mark.textContent, null, null, data.note, mark);
       });
     };
 
@@ -386,12 +472,7 @@
     actionMenu.appendChild(divider);
     actionMenu.appendChild(removeBtn);
     
-    const scrollX = window.scrollX || window.pageXOffset;
-    const scrollY = window.scrollY || window.pageYOffset;
-    actionMenu.style.left = `${rect.left + scrollX + (rect.width / 2) - 40}px`;
-    actionMenu.style.top = `${rect.top + scrollY - 45}px`;
-    actionMenu.style.display = 'flex';
-    
+    positionToolbar(actionMenu, rect);
     root.appendChild(actionMenu);
 
     const dismisser = (e) => {
@@ -404,19 +485,102 @@
     setTimeout(() => document.addEventListener('mousedown', dismisser), 10);
   }
 
+  function showReaderSaveActions(mark, rect) {
+    const root = createShadowRoot();
+    const actionMenu = document.createElement('div');
+    actionMenu.className = 'rw-toolbar'; 
+    
+    // Edit Button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'rw-btn';
+    editBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+    editBtn.onclick = () => {
+      actionMenu.remove();
+      const existingNote = mark.getAttribute('data-notes') || '';
+      const existingTags = JSON.parse(mark.getAttribute('data-tags') || '[]');
+      showNoteUI(rect, { mode: 'reader', existingNote, existingTags }, (data) => {
+        const id = mark.getAttribute('data-reader-id');
+        chrome.runtime.sendMessage({
+          action: 'update-reader-document',
+          id: id,
+          data: { notes: data.note, tags: data.tags }
+        }, (response) => {
+          if (response && response.success) {
+            updateExistingReaderSave(mark, data.tags, data.note);
+            showNotification('Reader document updated!', 'success');
+          } else {
+            showNotification('Update failed: ' + (response ? response.error : 'Unknown'), 'error');
+          }
+        });
+      });
+    };
+
+    // Remove Button
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'rw-btn';
+    removeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+    
+    removeBtn.onclick = () => {
+      const id = mark.getAttribute('data-reader-id');
+      if (id) {
+        chrome.runtime.sendMessage({ action: 'delete-reader-document', id });
+      }
+      
+      const parent = mark.parentNode;
+      while (mark.firstChild) {
+        parent.insertBefore(mark.firstChild, mark);
+      }
+      mark.remove();
+      actionMenu.remove();
+      showNotification('Clip removed from Reader', 'info');
+    };
+    
+    actionMenu.appendChild(editBtn);
+    const divider = document.createElement('div');
+    divider.className = 'rw-divider';
+    actionMenu.appendChild(divider);
+    actionMenu.appendChild(removeBtn);
+    
+    positionToolbar(actionMenu, rect);
+    root.appendChild(actionMenu);
+
+    const dismisser = (e) => {
+      const path = e.composedPath();
+      if (!path.includes(actionMenu)) {
+        actionMenu.remove();
+        document.removeEventListener('mousedown', dismisser);
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', dismisser), 10);
+  }
+
+  function positionToolbar(el, rect) {
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    el.style.left = `${rect.left + scrollX + (rect.width / 2) - 40}px`;
+    el.style.top = `${rect.top + scrollY - 45}px`;
+    el.style.display = 'flex';
+  }
+
   function showToolbar(rect) {
     if (!settings.enableToolbar) return;
     const tb = createToolbar();
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
     
-    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - 100}px`;
+    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - 110}px`;
     tb.style.top = `${rect.top + scrollY - 50}px`;
     tb.style.display = 'flex';
   }
 
   function hideToolbar() {
     if (toolbar) toolbar.style.display = 'none';
+  }
+
+  function getRangeHtml(range) {
+    const div = document.createElement('div');
+    div.appendChild(range.cloneContents());
+    return div.innerHTML;
   }
 
   // --- Event Listeners ---
@@ -432,7 +596,8 @@
       if (text && text.length > 0) {
         const range = selection.getRangeAt(0).cloneRange();
         const rect = range.getBoundingClientRect();
-        activeSelection = { text, range, rect };
+        const html = getRangeHtml(range);
+        activeSelection = { text, range, rect, html };
         showToolbar(rect);
       } else {
         hideToolbar();
@@ -442,10 +607,18 @@
 
   document.addEventListener('click', (e) => {
     const path = e.composedPath();
+    if (selectionExists()) return;
+
     const highlight = path.find(el => el.classList && el.classList.contains('rw-highlight'));
-    if (highlight && !selectionExists()) {
-      const rect = highlight.getBoundingClientRect();
-      showHighlightActions(highlight, rect);
+    if (highlight) {
+      showHighlightActions(highlight, highlight.getBoundingClientRect());
+      return;
+    }
+
+    const readerSave = path.find(el => el.classList && el.classList.contains('rw-reader-save'));
+    if (readerSave) {
+      showReaderSaveActions(readerSave, readerSave.getBoundingClientRect());
+      return;
     }
   });
 

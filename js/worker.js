@@ -178,7 +178,107 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     deleteHighlight(request.id).then(sendResponse);
     return true;
   }
+
+  if (request.action === 'save-reader-html') {
+    saveReaderHtml(request.data).then(sendResponse);
+    return true;
+  }
+
+  if (request.action === 'update-reader-document') {
+    updateReaderDocument(request.id, request.data).then(sendResponse);
+    return true;
+  }
+
+  if (request.action === 'delete-reader-document') {
+    deleteReaderDocument(request.id).then(sendResponse);
+    return true;
+  }
 });
+
+async function saveReaderHtml(data) {
+  const settings = await getSettings();
+  if (!settings.readwiseToken) return { success: false, error: 'Token missing' };
+
+  try {
+    const payload = {
+      url: data.url,
+      html: data.html,
+      title: data.title,
+      location: settings.defaultLocation,
+      saved_using: 'Readwise Companion Extension (Selection)'
+    };
+
+    if (data.tags && data.tags.length > 0) {
+      payload.tags = data.tags;
+    }
+
+    if (data.notes && data.notes.trim().length > 0) {
+      payload.notes = data.notes.trim();
+    }
+
+    const response = await fetch('https://readwise.io/api/v3/save/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${settings.readwiseToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      return { success: true, id: result.id };
+    } else {
+      const errData = await response.json();
+      return { success: false, error: errData.detail || response.statusText };
+    }
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function updateReaderDocument(id, data) {
+  const token = await getToken();
+  if (!token) return { success: false, error: 'Token missing' };
+
+  try {
+    const response = await fetch(`https://readwise.io/api/v3/update/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+      return { success: true };
+    } else {
+      const errData = await response.json();
+      return { success: false, error: errData.detail || response.statusText };
+    }
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+async function deleteReaderDocument(id) {
+  const token = await getToken();
+  if (!token) return { success: false, error: 'Token missing' };
+
+  try {
+    const response = await fetch(`https://readwise.io/api/v3/delete/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Token ${token}`
+      }
+    });
+
+    return { success: response.status === 204 };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
 
 async function deleteHighlight(id) {
   const token = await getToken();

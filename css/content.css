@@ -150,7 +150,7 @@
 
 .rw-note-input {
   width: 100%;
-  height: 100px;
+  height: 80px;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
   padding: 10px;
@@ -162,7 +162,29 @@
   background: #fdfdfd;
 }
 
-.rw-note-input:focus {
+.rw-tag-input {
+  width: 100%;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  color: #191919;
+  background: #fdfdfd;
+  margin-bottom: 4px;
+}
+
+mark.rw-reader-save {
+  background: transparent !important;
+  border-bottom: 2px dotted #2c46f1 !important;
+  color: inherit !important;
+  cursor: pointer;
+  position: relative;
+}
+
+.rw-btn-primary {
+
   outline: none;
   border-color: #2c46f1;
 }

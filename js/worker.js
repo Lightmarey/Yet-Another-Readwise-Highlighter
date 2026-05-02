@@ -102,18 +102,22 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // Tab update/activation for status check
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'loading') {
+    updatePageIndicator(tabId, false); // Clear on load start
+  }
   if (changeInfo.status === 'complete' && tab.url) {
     checkPageInReader(tab.url).then(isSaved => {
-      updatePageIndicator(tabId, isSaved);
+      if (isSaved) updatePageIndicator(tabId, true);
     });
   }
 });
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
+  updatePageIndicator(activeInfo.tabId, false); // Clear immediately
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (tab && tab.url) {
       checkPageInReader(tab.url).then(isSaved => {
-        updatePageIndicator(activeInfo.tabId, isSaved);
+        if (isSaved) updatePageIndicator(activeInfo.tabId, true);
       });
     }
   });

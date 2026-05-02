@@ -22,18 +22,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const defaultLocationSelect = document.getElementById('defaultLocation');
   const saveButton = document.getElementById('save');
   const status = document.getElementById('status');
+  const versionSpan = document.getElementById('version');
+
+  // Set version from manifest
+  try {
+    const manifest = chrome.runtime.getManifest();
+    if (versionSpan) versionSpan.textContent = `v${manifest.version}`;
+  } catch (e) {
+    console.warn('Could not load version from manifest');
+  }
 
   // Load settings
   chrome.storage.sync.get(DEFAULT_SETTINGS, (settings) => {
-    tokenInput.value = settings.readwiseToken;
-    enableFABCheckbox.checked = settings.enableFAB;
-    enableToolbarCheckbox.checked = settings.enableToolbar;
-    checkStatusCheckbox.checked = settings.checkPageStatus;
-    quickSaveCheckbox.checked = settings.quickSaveSelection;
-    beforeSaveSelect.value = settings.beforeSaveAction;
-    afterSaveSelect.value = settings.afterSaveAction;
-    defaultColorSelect.value = settings.defaultColor;
-    defaultLocationSelect.value = settings.defaultLocation;
+    if (tokenInput) tokenInput.value = settings.readwiseToken || '';
+    if (enableFABCheckbox) enableFABCheckbox.checked = !!settings.enableFAB;
+    if (enableToolbarCheckbox) enableToolbarCheckbox.checked = !!settings.enableToolbar;
+    if (checkStatusCheckbox) checkStatusCheckbox.checked = !!settings.checkPageStatus;
+    if (quickSaveCheckbox) quickSaveCheckbox.checked = !!settings.quickSaveSelection;
+    if (beforeSaveSelect) beforeSaveSelect.value = settings.beforeSaveAction || 'save';
+    if (afterSaveSelect) afterSaveSelect.value = settings.afterSaveAction || 'open_saved';
+    if (defaultColorSelect) defaultColorSelect.value = settings.defaultColor || 'yellow';
+    if (defaultLocationSelect) defaultLocationSelect.value = settings.defaultLocation || 'new';
   });
 
   // Save settings

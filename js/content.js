@@ -537,6 +537,11 @@
         playSound('saved');
         if (fab) fab.classList.remove('loading');
         break;
+      case 'deletion-success':
+        showNotification('Document deleted from Reader', 'deletion');
+        playSound('select');
+        if (fab) fab.classList.remove('loading');
+        break;
       case 'saving-error':
         showNotification(`Error: ${request.error}`, 'error');
         playSound('error');

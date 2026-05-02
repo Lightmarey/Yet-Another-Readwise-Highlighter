@@ -131,7 +131,7 @@ chrome.action.onClicked.addListener(async (tab) => {
           if (result.success) {
             urlStatusCache.set(tab.url, { isSaved: false });
             updatePageIndicator(tab.id, false);
-            sendMessageToTab(tab.id, { action: 'saving-error', error: 'Document deleted from Reader' });
+            sendMessageToTab(tab.id, { action: 'deletion-success' });
           }
         }
         break;

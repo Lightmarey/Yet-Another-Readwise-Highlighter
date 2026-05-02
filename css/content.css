@@ -24,6 +24,9 @@
 .rw-notification[data-type="error"] {
   border-left-color: #ea4f3d;
 }
+.rw-notification[data-type="deletion"] {
+  border-left-color: #6d7582;
+}
 .rw-notification[data-type="loading"] {
   border-left-color: #2c46f1;
 }

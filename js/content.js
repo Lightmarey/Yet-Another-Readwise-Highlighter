@@ -9,13 +9,15 @@
     enableToolbar: true,
     defaultColor: 'yellow',
     defaultLocation: 'new',
-    quickSaveSelection: false
+    quickSaveSelection: false,
+    toolbarVerticalPosition: 'above',
+    toolbarHorizontalOffset: 0
   };
 
   // --- Core Initialization ---
 
   function init() {
-    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultColor', 'defaultLocation', 'quickSaveSelection'], (data) => {
+    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultColor', 'defaultLocation', 'quickSaveSelection', 'toolbarVerticalPosition', 'toolbarHorizontalOffset'], (data) => {
       Object.assign(settings, data);
       updateUI();
     });
@@ -265,7 +267,7 @@
       tagInput.value = (options.existingTags || []).join(', ');
 
       locationSelect = document.createElement('select');
-      locationSelect.className = 'rw-tag-input'; // Reuse style
+      locationSelect.className = 'rw-tag-input';
       locationSelect.style.width = 'auto';
       ['new', 'later', 'archive', 'feed'].forEach(loc => {
         const opt = document.createElement('option');
@@ -301,7 +303,10 @@
     
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
-    noteContainer.style.left = `${Math.max(10, rect.left + scrollX)}px`;
+    
+    // Position logic respecting settings
+    const offset = settings.toolbarHorizontalOffset || 0;
+    noteContainer.style.left = `${Math.max(10, rect.left + scrollX + offset)}px`;
     noteContainer.style.top = `${rect.bottom + scrollY + 10}px`;
     
     root.appendChild(noteContainer);
@@ -476,8 +481,15 @@
   function positionToolbar(el, rect) {
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
-    el.style.left = `${rect.left + scrollX + (rect.width / 2) - 40}px`;
-    el.style.top = `${rect.top + scrollY - 45}px`;
+    const offset = settings.toolbarHorizontalOffset || 0;
+    
+    el.style.left = `${rect.left + scrollX + (rect.width / 2) - 40 + offset}px`;
+    
+    if (settings.toolbarVerticalPosition === 'below') {
+      el.style.top = `${rect.bottom + scrollY + 10}px`;
+    } else {
+      el.style.top = `${rect.top + scrollY - 45}px`;
+    }
     el.style.display = 'flex';
   }
 
@@ -486,8 +498,15 @@
     const tb = createToolbar();
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
-    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - 110}px`;
-    tb.style.top = `${rect.top + scrollY - 50}px`;
+    const offset = settings.toolbarHorizontalOffset || 0;
+    
+    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - 110 + offset}px`;
+    
+    if (settings.toolbarVerticalPosition === 'below') {
+      tb.style.top = `${rect.bottom + scrollY + 10}px`;
+    } else {
+      tb.style.top = `${rect.top + scrollY - 50}px`;
+    }
     tb.style.display = 'flex';
   }
 

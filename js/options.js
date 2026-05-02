@@ -7,7 +7,9 @@ const DEFAULT_SETTINGS = {
   afterSaveAction: 'open_saved',
   quickSaveSelection: false,
   defaultColor: 'yellow',
-  defaultLocation: 'new'
+  defaultLocation: 'new',
+  toolbarVerticalPosition: 'above',
+  toolbarHorizontalOffset: 0
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const afterSaveSelect = document.getElementById('afterSaveAction');
   const defaultColorSelect = document.getElementById('defaultColor');
   const defaultLocationSelect = document.getElementById('defaultLocation');
+  const verticalPosSelect = document.getElementById('toolbarVerticalPosition');
+  const horizontalOffsetInput = document.getElementById('toolbarHorizontalOffset');
   const saveButton = document.getElementById('save');
   const status = document.getElementById('status');
   const versionSpan = document.getElementById('version');
@@ -43,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (afterSaveSelect) afterSaveSelect.value = settings.afterSaveAction || 'open_saved';
     if (defaultColorSelect) defaultColorSelect.value = settings.defaultColor || 'yellow';
     if (defaultLocationSelect) defaultLocationSelect.value = settings.defaultLocation || 'new';
+    if (verticalPosSelect) verticalPosSelect.value = settings.toolbarVerticalPosition || 'above';
+    if (horizontalOffsetInput) horizontalOffsetInput.value = settings.toolbarHorizontalOffset ?? 0;
   });
 
   // Save settings
@@ -56,7 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
       beforeSaveAction: beforeSaveSelect.value,
       afterSaveAction: afterSaveSelect.value,
       defaultColor: defaultColorSelect.value,
-      defaultLocation: defaultLocationSelect.value
+      defaultLocation: defaultLocationSelect.value,
+      toolbarVerticalPosition: verticalPosSelect.value,
+      toolbarHorizontalOffset: parseInt(horizontalOffsetInput.value, 10) || 0
     };
 
     if (!settings.readwiseToken) {

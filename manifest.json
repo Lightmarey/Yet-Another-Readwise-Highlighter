@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Readwise Companion",
-  "version": "1.2",
+  "version": "1.2.2",
   "description": "Highlighter and Reader clipper for Readwise.",
   "icons": {
     "16": "icon/toolbar-icon.png",

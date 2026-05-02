@@ -66,7 +66,11 @@ async function checkPageInReader(url) {
     });
     if (response.ok) {
       const data = await response.json();
-      return data.count > 0;
+      // data.count is the total count of documents in the user's account.
+      // We must check if any actual result matches our URL.
+      return data.results && data.results.length > 0 && data.results.some(doc => 
+        doc.source_url === url || doc.url === url
+      );
     }
   } catch (e) {
     console.error('Status check failed:', e);

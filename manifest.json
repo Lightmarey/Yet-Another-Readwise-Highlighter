@@ -1,0 +1,70 @@
+{
+  "manifest_version": 3,
+  "name": "Readwise Companion",
+  "version": "1.0",
+  "description": "Highlighter and Reader clipper for Readwise.",
+  "icons": {
+    "16": "icon/toolbar-icon.png",
+    "48": "icon/toolbar-icon.png",
+    "128": "icon/toolbar-icon.png"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "scripting",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "js/worker.js",
+    "scripts": ["js/worker.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{d5a1b3c7-e2f4-4a5d-b8d9-0c1e2f3a4b5c}",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"],
+        "optional": []
+      }
+    }
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon/toolbar-icon.png",
+      "32": "icon/toolbar-icon.png",
+      "48": "icon/toolbar-icon.png",
+      "128": "icon/toolbar-icon.png"
+    },
+    "default_title": "Save to Reader"
+  },
+  "options_page": "html/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "js/content.js"
+      ],
+      "css": [
+        "css/content.css",
+        "css/globalHighlightStyles.css"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "audio/*.m4a",
+        "css/*.css",
+        "icon/*.png"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ]
+}

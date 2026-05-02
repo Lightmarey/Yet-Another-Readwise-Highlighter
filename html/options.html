@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Readwise Companion Settings</title>
+  <link rel="stylesheet" type="text/css" href="../css/options.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="../icon/toolbar-icon.png" width="32" height="32" alt="Logo">
+      <h1>Readwise Companion</h1>
+    </div>
+
+    <section class="section">
+      <h2 class="section-title">Account</h2>
+      <div class="field">
+        <label for="accessToken">Access Token</label>
+        <div class="input-with-button">
+          <input type="password" id="accessToken" placeholder="Enter your Readwise token">
+        </div>
+        <p class="help">Get your token from <a href="https://readwise.io/access_token" target="_blank">readwise.io/access_token</a></p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Features</h2>
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Floating Save Button</span>
+          <span class="toggle-desc">Show a quick-save icon on the edge of every webpage.</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="enableFAB">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Selection Toolbar</span>
+          <span class="toggle-desc">Show highlight and note tools when text is selected.</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="enableToolbar">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Check Page Status</span>
+          <span class="toggle-desc">Show a indicator on the icon if the page is already in Reader.</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="checkPageStatus">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="defaultColor">Default Highlight Color</label>
+        <select id="defaultColor" class="select-input">
+          <option value="yellow">Yellow</option>
+          <option value="blue">Blue</option>
+          <option value="green">Green</option>
+          <option value="pink">Pink</option>
+          <option value="purple">Purple</option>
+          <option value="orange">Orange</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="defaultLocation">Default Save Location (Reader)</label>
+        <select id="defaultLocation" class="select-input">
+          <option value="new">New</option>
+          <option value="later">Later</option>
+          <option value="archive">Archive</option>
+          <option value="feed">Feed</option>
+        </select>
+      </div>
+    </section>
+
+    <div class="footer">
+      <button id="save" class="primary-btn">Save Changes</button>
+      <span id="status"></span>
+    </div>
+  </div>
+  <script src="../js/options.js"></script>
+</body>
+</html>

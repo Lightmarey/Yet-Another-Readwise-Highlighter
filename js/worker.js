@@ -13,6 +13,9 @@ async function getSettings() {
   });
 }
 
+// State cache to reduce flicker and API calls
+const urlStatusCache = new Map(); // URL -> Boolean (isSaved)
+
 // Unified Save Page Function
 async function saveToReader(url, title, tabId) {
   const settings = await getSettings();
@@ -34,6 +37,7 @@ async function saveToReader(url, title, tabId) {
     });
 
     if (response.ok) {
+      urlStatusCache.set(url, true);
       updatePageIndicator(tabId, true);
       return { success: true };
     } else {
@@ -53,6 +57,8 @@ async function saveToReader(url, title, tabId) {
 
 // Check if page is already in Reader
 async function checkPageInReader(url) {
+  if (urlStatusCache.has(url)) return urlStatusCache.get(url);
+
   const settings = await getSettings();
   if (!settings.readwiseToken || !settings.checkPageStatus) return false;
   if (!url || url.startsWith('chrome://') || url.startsWith('about:')) return false;
@@ -66,11 +72,11 @@ async function checkPageInReader(url) {
     });
     if (response.ok) {
       const data = await response.json();
-      // data.count is the total count of documents in the user's account.
-      // We must check if any actual result matches our URL.
-      return data.results && data.results.length > 0 && data.results.some(doc => 
+      const isSaved = data.results && data.results.length > 0 && data.results.some(doc => 
         doc.source_url === url || doc.url === url
       );
+      urlStatusCache.set(url, isSaved);
+      return isSaved;
     }
   } catch (e) {
     console.error('Status check failed:', e);
@@ -89,7 +95,6 @@ function updatePageIndicator(tabId, isSaved) {
 
 // --- Event Listeners ---
 
-// Handle toolbar icon click
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('about:')) return;
 
@@ -104,30 +109,42 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
-// Tab update/activation for status check
+// Optimized tab update listener to reduce flicker
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'loading') {
-    updatePageIndicator(tabId, false); // Clear on load start
+  // Only clear the badge if the URL itself is changing
+  if (changeInfo.url) {
+    updatePageIndicator(tabId, false);
   }
+  
+  // Perform check when loading is complete
   if (changeInfo.status === 'complete' && tab.url) {
     checkPageInReader(tab.url).then(isSaved => {
-      if (isSaved) updatePageIndicator(tabId, true);
+      if (isSaved) {
+        updatePageIndicator(tabId, true);
+      } else {
+        updatePageIndicator(tabId, false);
+      }
     });
   }
 });
 
 chrome.tabs.onActivated.addListener((activeInfo) => {
-  updatePageIndicator(activeInfo.tabId, false); // Clear immediately
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (tab && tab.url) {
-      checkPageInReader(tab.url).then(isSaved => {
-        if (isSaved) updatePageIndicator(activeInfo.tabId, true);
-      });
+      // Use cache for instant feedback on activation
+      if (urlStatusCache.has(tab.url)) {
+        updatePageIndicator(activeInfo.tabId, urlStatusCache.get(tab.url));
+      } else {
+        // Only clear if not in cache to avoid flicker
+        updatePageIndicator(activeInfo.tabId, false);
+        checkPageInReader(tab.url).then(isSaved => {
+          updatePageIndicator(activeInfo.tabId, isSaved);
+        });
+      }
     }
   });
 });
 
-// Handle messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'save-page-request') {
     saveToReader(sender.tab.url, sender.tab.title, sender.tab.id).then(sendResponse);
@@ -157,11 +174,7 @@ async function deleteHighlight(id) {
       }
     });
 
-    if (response.status === 204) {
-      return { success: true };
-    } else {
-      return { success: false, error: `Delete failed: ${response.statusText}` };
-    }
+    return { success: response.status === 204 };
   } catch (e) {
     return { success: false, error: e.message };
   }

@@ -3,6 +3,7 @@ const DEFAULT_SETTINGS = {
   enableFAB: true,
   enableToolbar: true,
   checkPageStatus: true,
+  openSavedInReader: true,
   defaultColor: 'yellow',
   defaultLocation: 'new'
 };
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const enableFABCheckbox = document.getElementById('enableFAB');
   const enableToolbarCheckbox = document.getElementById('enableToolbar');
   const checkStatusCheckbox = document.getElementById('checkPageStatus');
+  const openSavedCheckbox = document.getElementById('openSavedInReader');
   const defaultColorSelect = document.getElementById('defaultColor');
   const defaultLocationSelect = document.getElementById('defaultLocation');
   const saveButton = document.getElementById('save');
@@ -23,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enableFABCheckbox.checked = settings.enableFAB;
     enableToolbarCheckbox.checked = settings.enableToolbar;
     checkStatusCheckbox.checked = settings.checkPageStatus;
+    openSavedCheckbox.checked = settings.openSavedInReader;
     defaultColorSelect.value = settings.defaultColor;
     defaultLocationSelect.value = settings.defaultLocation;
   });
@@ -34,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
       enableFAB: enableFABCheckbox.checked,
       enableToolbar: enableToolbarCheckbox.checked,
       checkPageStatus: checkStatusCheckbox.checked,
+      openSavedInReader: openSavedCheckbox.checked,
       defaultColor: defaultColorSelect.value,
       defaultLocation: defaultLocationSelect.value
     };

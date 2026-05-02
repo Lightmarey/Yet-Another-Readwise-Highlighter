@@ -8,13 +8,15 @@ async function getToken() {
 async function getSettings() {
   return await chrome.storage.sync.get({
     checkPageStatus: true,
+    openSavedInReader: true,
     readwiseToken: '',
     defaultLocation: 'new'
   });
 }
 
 // State cache to reduce flicker and API calls
-const urlStatusCache = new Map(); // URL -> Boolean (isSaved)
+// URL -> { isSaved: Boolean, readerUrl: String }
+const urlStatusCache = new Map(); 
 
 // Unified Save Page Function
 async function saveToReader(url, title, tabId) {
@@ -37,9 +39,10 @@ async function saveToReader(url, title, tabId) {
     });
 
     if (response.ok) {
-      urlStatusCache.set(url, true);
+      const data = await response.json();
+      urlStatusCache.set(url, { isSaved: true, readerUrl: data.url });
       updatePageIndicator(tabId, true);
-      return { success: true };
+      return { success: true, readerUrl: data.url };
     } else {
       let errorDetail = 'API Error';
       try {
@@ -57,7 +60,7 @@ async function saveToReader(url, title, tabId) {
 
 // Check if page is already in Reader
 async function checkPageInReader(url) {
-  if (urlStatusCache.has(url)) return urlStatusCache.get(url);
+  if (urlStatusCache.has(url)) return urlStatusCache.get(url).isSaved;
 
   const settings = await getSettings();
   if (!settings.readwiseToken || !settings.checkPageStatus) return false;
@@ -72,10 +75,9 @@ async function checkPageInReader(url) {
     });
     if (response.ok) {
       const data = await response.json();
-      const isSaved = data.results && data.results.length > 0 && data.results.some(doc => 
-        doc.source_url === url || doc.url === url
-      );
-      urlStatusCache.set(url, isSaved);
+      const savedDoc = data.results && data.results.find(doc => doc.source_url === url || doc.url === url);
+      const isSaved = !!savedDoc;
+      urlStatusCache.set(url, { isSaved, readerUrl: savedDoc ? savedDoc.url : null });
       return isSaved;
     }
   } catch (e) {
@@ -95,8 +97,32 @@ function updatePageIndicator(tabId, isSaved) {
 
 // --- Event Listeners ---
 
+// Create context menu for settings
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'open-settings',
+    title: 'Settings',
+    contexts: ['action']
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId === 'open-settings') {
+    chrome.runtime.openOptionsPage();
+  }
+});
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('about:')) return;
+
+  const settings = await getSettings();
+  
+  // Check if already saved and user wants to open it
+  const cachedStatus = urlStatusCache.get(tab.url);
+  if (settings.openSavedInReader && cachedStatus && cachedStatus.isSaved && cachedStatus.readerUrl) {
+    chrome.tabs.create({ url: cachedStatus.readerUrl });
+    return;
+  }
 
   sendMessageToTab(tab.id, { action: 'saving-started' });
 
@@ -109,21 +135,15 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
-// Optimized tab update listener to reduce flicker
+// Optimized tab update listener
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Only clear the badge if the URL itself is changing
   if (changeInfo.url) {
     updatePageIndicator(tabId, false);
   }
   
-  // Perform check when loading is complete
   if (changeInfo.status === 'complete' && tab.url) {
     checkPageInReader(tab.url).then(isSaved => {
-      if (isSaved) {
-        updatePageIndicator(tabId, true);
-      } else {
-        updatePageIndicator(tabId, false);
-      }
+      updatePageIndicator(tabId, isSaved);
     });
   }
 });
@@ -131,11 +151,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (tab && tab.url) {
-      // Use cache for instant feedback on activation
       if (urlStatusCache.has(tab.url)) {
-        updatePageIndicator(activeInfo.tabId, urlStatusCache.get(tab.url));
+        updatePageIndicator(activeInfo.tabId, urlStatusCache.get(tab.url).isSaved);
       } else {
-        // Only clear if not in cache to avoid flicker
         updatePageIndicator(activeInfo.tabId, false);
         checkPageInReader(tab.url).then(isSaved => {
           updatePageIndicator(activeInfo.tabId, isSaved);

@@ -38,7 +38,10 @@
     },
     "default_title": "Save to Reader"
   },
-  "options_page": "html/options.html",
+  "options_ui": {
+    "page": "html/options.html",
+    "open_in_tab": true
+  },
   "content_scripts": [
     {
       "matches": [

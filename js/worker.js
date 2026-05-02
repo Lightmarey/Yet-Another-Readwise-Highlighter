@@ -8,14 +8,15 @@ async function getToken() {
 async function getSettings() {
   return await chrome.storage.sync.get({
     checkPageStatus: true,
-    openSavedInReader: true,
+    beforeSaveAction: 'save',
+    afterSaveAction: 'open_saved',
     readwiseToken: '',
     defaultLocation: 'new'
   });
 }
 
 // State cache to reduce flicker and API calls
-// URL -> { isSaved: Boolean, readerUrl: String }
+// URL -> { isSaved: Boolean, readerUrl: String, docId: String }
 const urlStatusCache = new Map(); 
 
 // Unified Save Page Function
@@ -40,9 +41,9 @@ async function saveToReader(url, title, tabId) {
 
     if (response.ok) {
       const data = await response.json();
-      urlStatusCache.set(url, { isSaved: true, readerUrl: data.url });
+      urlStatusCache.set(url, { isSaved: true, readerUrl: data.url, docId: data.id });
       updatePageIndicator(tabId, true);
-      return { success: true, readerUrl: data.url };
+      return { success: true, readerUrl: data.url, id: data.id };
     } else {
       let errorDetail = 'API Error';
       try {
@@ -77,7 +78,7 @@ async function checkPageInReader(url) {
       const data = await response.json();
       const savedDoc = data.results && data.results.find(doc => doc.source_url === url || doc.url === url);
       const isSaved = !!savedDoc;
-      urlStatusCache.set(url, { isSaved, readerUrl: savedDoc ? savedDoc.url : null });
+      urlStatusCache.set(url, { isSaved, readerUrl: savedDoc ? savedDoc.url : null, docId: savedDoc ? savedDoc.id : null });
       return isSaved;
     }
   } catch (e) {
@@ -116,22 +117,47 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('about:')) return;
 
   const settings = await getSettings();
-  
-  // Check if already saved and user wants to open it
-  const cachedStatus = urlStatusCache.get(tab.url);
-  if (settings.openSavedInReader && cachedStatus && cachedStatus.isSaved && cachedStatus.readerUrl) {
-    chrome.tabs.create({ url: cachedStatus.readerUrl });
-    return;
-  }
+  const cachedStatus = urlStatusCache.get(tab.url) || { isSaved: false };
 
-  sendMessageToTab(tab.id, { action: 'saving-started' });
-
-  const result = await saveToReader(tab.url, tab.title, tab.id);
-  
-  if (result.success) {
-    sendMessageToTab(tab.id, { action: 'saving-success' });
+  if (cachedStatus.isSaved) {
+    // AFTER SAVE ACTIONS
+    switch (settings.afterSaveAction) {
+      case 'open_saved':
+        if (cachedStatus.readerUrl) chrome.tabs.create({ url: cachedStatus.readerUrl });
+        break;
+      case 'delete':
+        if (cachedStatus.docId) {
+          const result = await deleteReaderDocument(cachedStatus.docId);
+          if (result.success) {
+            urlStatusCache.set(tab.url, { isSaved: false });
+            updatePageIndicator(tab.id, false);
+            sendMessageToTab(tab.id, { action: 'saving-error', error: 'Document deleted from Reader' });
+          }
+        }
+        break;
+      case 'none':
+      default:
+        break;
+    }
   } else {
-    sendMessageToTab(tab.id, { action: 'saving-error', error: result.error });
+    // BEFORE SAVE ACTIONS
+    switch (settings.beforeSaveAction) {
+      case 'save':
+        sendMessageToTab(tab.id, { action: 'saving-started' });
+        const result = await saveToReader(tab.url, tab.title, tab.id);
+        if (result.success) {
+          sendMessageToTab(tab.id, { action: 'saving-success' });
+        } else {
+          sendMessageToTab(tab.id, { action: 'saving-error', error: result.error });
+        }
+        break;
+      case 'open_reader':
+        chrome.tabs.create({ url: 'https://read.readwise.io/' });
+        break;
+      case 'none':
+      default:
+        break;
+    }
   }
 });
 
@@ -204,7 +230,7 @@ async function saveReaderHtml(data) {
       url: data.url,
       html: data.html,
       title: data.title,
-      location: settings.defaultLocation,
+      location: data.location || settings.defaultLocation,
       saved_using: 'Readwise Companion Extension (Selection)'
     };
 

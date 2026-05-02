@@ -60,24 +60,31 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Open Saved in Reader</span>
-          <span class="toggle-desc">Clicking the icon opens the Reader page if already saved.</span>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="openSavedInReader">
-          <span class="slider round"></span>
-        </label>
-      </div>
-
-      <div class="toggle-field">
-        <div class="toggle-info">
           <span class="toggle-label">Quick Save Selection</span>
-          <span class="toggle-desc">Skip tag/note popup and visual mark for Reader selection saves.</span>
+          <span class="toggle-desc">Skip tag/note popup for Reader selection saves.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="quickSaveSelection">
           <span class="slider round"></span>
         </label>
+      </div>
+
+      <div class="field">
+        <label for="beforeSaveAction">Action Before Save (Page not in Reader)</label>
+        <select id="beforeSaveAction" class="select-input">
+          <option value="save">Save to Reader</option>
+          <option value="open_reader">Open Reader Dashboard</option>
+          <option value="none">Nothing</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="afterSaveAction">Action After Save (Page already in Reader)</label>
+        <select id="afterSaveAction" class="select-input">
+          <option value="open_saved">Open current page in Reader</option>
+          <option value="delete">Delete page in Reader</option>
+          <option value="none">Nothing</option>
+        </select>
       </div>
 
       <div class="field">

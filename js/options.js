@@ -3,7 +3,8 @@ const DEFAULT_SETTINGS = {
   enableFAB: true,
   enableToolbar: true,
   checkPageStatus: true,
-  openSavedInReader: true,
+  beforeSaveAction: 'save',
+  afterSaveAction: 'open_saved',
   quickSaveSelection: false,
   defaultColor: 'yellow',
   defaultLocation: 'new'
@@ -14,8 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const enableFABCheckbox = document.getElementById('enableFAB');
   const enableToolbarCheckbox = document.getElementById('enableToolbar');
   const checkStatusCheckbox = document.getElementById('checkPageStatus');
-  const openSavedCheckbox = document.getElementById('openSavedInReader');
   const quickSaveCheckbox = document.getElementById('quickSaveSelection');
+  const beforeSaveSelect = document.getElementById('beforeSaveAction');
+  const afterSaveSelect = document.getElementById('afterSaveAction');
   const defaultColorSelect = document.getElementById('defaultColor');
   const defaultLocationSelect = document.getElementById('defaultLocation');
   const saveButton = document.getElementById('save');
@@ -27,8 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     enableFABCheckbox.checked = settings.enableFAB;
     enableToolbarCheckbox.checked = settings.enableToolbar;
     checkStatusCheckbox.checked = settings.checkPageStatus;
-    openSavedCheckbox.checked = settings.openSavedInReader;
     quickSaveCheckbox.checked = settings.quickSaveSelection;
+    beforeSaveSelect.value = settings.beforeSaveAction;
+    afterSaveSelect.value = settings.afterSaveAction;
     defaultColorSelect.value = settings.defaultColor;
     defaultLocationSelect.value = settings.defaultLocation;
   });
@@ -40,8 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
       enableFAB: enableFABCheckbox.checked,
       enableToolbar: enableToolbarCheckbox.checked,
       checkPageStatus: checkStatusCheckbox.checked,
-      openSavedInReader: openSavedCheckbox.checked,
       quickSaveSelection: quickSaveCheckbox.checked,
+      beforeSaveAction: beforeSaveSelect.value,
+      afterSaveAction: afterSaveSelect.value,
       defaultColor: defaultColorSelect.value,
       defaultLocation: defaultLocationSelect.value
     };

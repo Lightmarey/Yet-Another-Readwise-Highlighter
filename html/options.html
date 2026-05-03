@@ -133,19 +133,27 @@ internal.app/*"></textarea>
     </section>
 
     <section class="section">
-      <h2 class="section-title">Annotation Styles</h2>
+      <div class="section-header">
+        <h2 class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Annotation Styles</h2>
+        <button id="toggleAddStyle" class="icon-btn primary-text-btn" title="Add Custom Style">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
       <div id="stylesList" class="styles-grid">
         <!-- Dynamic styles here -->
       </div>
       
-      <div class="add-style-card">
+      <div id="addStyleContainer" class="add-style-card" style="display: none;">
         <h3 class="field-label">Add Custom Style</h3>
         <div class="field-row">
           <input type="text" id="newStyleLabel" placeholder="Label (e.g. Wavy Red)" class="select-input">
           <input type="text" id="newStyleIcon" placeholder="Icon (e.g. 🖍️)" class="select-input" style="width: 80px;">
         </div>
         <textarea id="newStyleCSS" placeholder="CSS (e.g. border-bottom: 2px wavy red;)" class="select-input" rows="2"></textarea>
-        <button id="addStyle" class="secondary-btn">Add Style</button>
+        <div class="field-row">
+          <button id="addStyle" class="primary-btn" style="padding: 8px 16px; font-size: 13px;">Add Style</button>
+          <button id="cancelAddStyle" class="secondary-btn" style="margin-top: 0;">Cancel</button>
+        </div>
       </div>
     </section>
 

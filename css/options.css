@@ -39,15 +39,21 @@ h1 {
   margin-bottom: 2.5rem;
 }
 
-.section-title {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #a9aaab;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.25rem;
-  font-weight: 600;
   border-bottom: 1px solid #f2f3f5;
   padding-bottom: 8px;
+}
+
+.primary-text-btn {
+  color: #2c46f1 !important;
+}
+
+.primary-text-btn:hover {
+  background: rgba(44, 70, 241, 0.05) !important;
 }
 
 .field {
@@ -264,6 +270,43 @@ input:checked + .slider:before {
 
 .delete-style-btn:hover {
   opacity: 0.7;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: #6a6a6b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.icon-btn:hover {
+  background: #edeff3;
+  color: #191919;
+}
+
+.delete-style-btn:hover {
+  background: #ffe6e6;
+  color: #ea4f3d;
+}
+
+.edit-form {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.style-card.editing {
+  cursor: default;
+  background: #fff;
+  border-color: #2c46f1;
+  box-shadow: 0 4px 12px rgba(44, 70, 241, 0.1);
 }
 
 .style-preview {

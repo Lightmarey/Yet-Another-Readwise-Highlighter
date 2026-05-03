@@ -1,3 +1,25 @@
+// Default settings constants
+const DEFAULT_SETTINGS = {
+  readwiseToken: '',
+  enableFAB: true,
+  enableToolbar: true,
+  checkPageStatus: true,
+  beforeSaveAction: 'save',
+  afterSaveAction: 'open_saved',
+  quickSaveSelection: false,
+  defaultLocation: 'new',
+  maxStylesToDisplay: 4,
+  toolbarVerticalPosition: 'above',
+  toolbarHorizontalOffset: 0,
+  excludedUrls: '',
+  annotationStyles: [
+    { id: 'h1', label: 'Yellow', icon: '✨', css: 'background-color: #ffd845;' },
+    { id: 'h2', label: 'Blue Dot', icon: '🔹', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
+    { id: 'h3', label: 'Red Wavy', icon: '〰️', css: 'text-decoration: underline wavy red; background: transparent;' },
+    { id: 'h4', label: 'Bold Italic', icon: 'B/I', css: 'font-weight: bold; font-style: italic; background: transparent;' }
+  ]
+};
+
 // Helper to get token
 async function getToken() {
   const data = await chrome.storage.sync.get('readwiseToken');
@@ -6,13 +28,7 @@ async function getToken() {
 
 // Helper to check settings
 async function getSettings() {
-  return await chrome.storage.sync.get({
-    checkPageStatus: true,
-    beforeSaveAction: 'save',
-    afterSaveAction: 'open_saved',
-    readwiseToken: '',
-    defaultLocation: 'new'
-  });
+  return await chrome.storage.sync.get(DEFAULT_SETTINGS);
 }
 
 // State cache to reduce flicker and API calls
@@ -98,12 +114,26 @@ function updatePageIndicator(tabId, isSaved) {
 
 // --- Event Listeners ---
 
-// Create context menu for settings
+// Create context menu and initialize defaults on install
 chrome.runtime.onInstalled.addListener(() => {
+  // Create context menu
   chrome.contextMenus.create({
     id: 'open-settings',
     title: 'Settings',
     contexts: ['action']
+  });
+
+  // Initialize default settings if they don't exist
+  chrome.storage.sync.get(null, (items) => {
+    const newSettings = {};
+    for (let key in DEFAULT_SETTINGS) {
+      if (items[key] === undefined) {
+        newSettings[key] = DEFAULT_SETTINGS[key];
+      }
+    }
+    if (Object.keys(newSettings).length > 0) {
+      chrome.storage.sync.set(newSettings);
+    }
   });
 });
 

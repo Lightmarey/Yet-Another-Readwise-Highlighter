@@ -4,6 +4,8 @@
   let toolbar = null;
   let fab = null;
   let activeSelection = null;
+  
+  // Explicit defaults for content script initialization
   let settings = {
     enableFAB: true,
     enableToolbar: true,
@@ -13,13 +15,19 @@
     toolbarVerticalPosition: 'above',
     toolbarHorizontalOffset: 0,
     excludedUrls: '',
-    annotationStyles: []
+    annotationStyles: [
+      { id: 'h1', label: 'Yellow', icon: '✨', css: 'background-color: #ffd845;' },
+      { id: 'h2', label: 'Blue Dot', icon: '🔹', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
+      { id: 'h3', label: 'Red Wavy', icon: '〰️', css: 'text-decoration: underline wavy red; background: transparent;' },
+      { id: 'h4', label: 'Bold Italic', icon: 'B/I', css: 'font-weight: bold; font-style: italic; background: transparent;' }
+    ]
   };
 
   // --- Core Initialization ---
 
   function init() {
-    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultLocation', 'quickSaveSelection', 'maxStylesToDisplay', 'toolbarVerticalPosition', 'toolbarHorizontalOffset', 'excludedUrls', 'annotationStyles'], (data) => {
+    // Pass the full settings object as a template to ensure all defaults are returned if missing in storage
+    chrome.storage.sync.get(settings, (data) => {
       Object.assign(settings, data);
       if (isUrlExcluded()) return;
       updateUI();
@@ -45,7 +53,9 @@
   init();
 
   chrome.storage.onChanged.addListener((changes) => {
-    for (let [key, { newValue }] of Object.entries(changes)) { settings[key] = newValue; }
+    for (let [key, { newValue }] of Object.entries(changes)) { 
+      if (newValue !== undefined) settings[key] = newValue; 
+    }
     updateUI();
   });
 
@@ -161,7 +171,6 @@
     noteBtn.title = 'Add Note';
     noteBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
-      // Default to #1 style for note
       handleHighlightAction('note', allStyles[0]);
     });
     toolbar.appendChild(noteBtn);
@@ -316,7 +325,6 @@
     noteBtn.onclick = () => {
       actionMenu.remove();
       const existingNote = mark.getAttribute('data-note-text') || '';
-      // Default to #1 style for existing note updates
       const defaultStyle = settings.annotationStyles[0] || { css: '' };
       showNoteUI(rect, { mode: 'note', existingNote }, (data) => { executeSaveHighlight(mark.textContent, null, defaultStyle, data.note, mark); });
     };
@@ -389,13 +397,13 @@
 
   function showToolbar(rect) {
     if (!settings.enableToolbar || isUrlExcluded()) return;
-    if (toolbar) { toolbar.remove(); toolbar = null; } // Always recreate to reflect setting changes
+    if (toolbar) { toolbar.remove(); toolbar = null; } 
     const tb = createToolbar();
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
     const offset = settings.toolbarHorizontalOffset || 0;
     const count = Math.max(1, settings.maxStylesToDisplay || 4);
-    const tbWidth = (count * 32) + 80; // Estimated width: buttons + divider + note + reader
+    const tbWidth = (count * 32) + 80; 
     
     tb.style.left = `${rect.left + scrollX + (rect.width / 2) - (tbWidth / 2) + offset}px`;
     if (settings.toolbarVerticalPosition === 'below') tb.style.top = `${rect.bottom + scrollY + 10}px`;

@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   ]
 };
 
+const TRASH_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`;
+const EDIT_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+
 document.addEventListener('DOMContentLoaded', () => {
   const tokenInput = document.getElementById('accessToken');
   const enableFABCheckbox = document.getElementById('enableFAB');
@@ -33,10 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const horizontalOffsetInput = document.getElementById('toolbarHorizontalOffset');
   const excludedUrlsTextarea = document.getElementById('excludedUrls');
   const stylesList = document.getElementById('stylesList');
+  const toggleAddStyleBtn = document.getElementById('toggleAddStyle');
+  const addStyleContainer = document.getElementById('addStyleContainer');
   const newStyleLabel = document.getElementById('newStyleLabel');
   const newStyleIcon = document.getElementById('newStyleIcon');
   const newStyleCSS = document.getElementById('newStyleCSS');
   const addStyleBtn = document.getElementById('addStyle');
+  const cancelAddStyleBtn = document.getElementById('cancelAddStyle');
   const saveButton = document.getElementById('save');
   const status = document.getElementById('status');
   const versionSpan = document.getElementById('version');
@@ -82,17 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
       
       card.innerHTML = `
         <div class="style-card-header">
-          <span class="style-card-title">
+          <div class="style-card-title">
             <span class="drag-handle">☰</span>
             <span style="color: #2c46f1; font-weight: 800; margin-right: 8px;">#${index + 1}</span>
-            ${style.icon} ${style.label} ${isDefault ? '<span style="font-size: 10px; background: #eef0f2; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">DEFAULT</span>' : ''}
-          </span>
-          <button class="delete-style-btn" data-index="${index}">Delete</button>
+            <span class="style-label-text">${style.icon} ${style.label}</span>
+            ${isDefault ? '<span style="font-size: 10px; background: #eef0f2; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">DEFAULT</span>' : ''}
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="icon-btn edit-style-btn" data-index="${index}" title="Edit Style">${EDIT_ICON}</button>
+            <button class="icon-btn delete-style-btn" data-index="${index}" title="Delete Style">${TRASH_ICON}</button>
+          </div>
         </div>
         <div class="style-preview" style="${style.css}">Preview Text</div>
       `;
 
-      // Drag and Drop Events
       card.addEventListener('dragstart', handleDragStart);
       card.addEventListener('dragover', handleDragOver);
       card.addEventListener('drop', handleDrop);
@@ -103,16 +112,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.delete-style-btn').forEach(btn => {
       btn.onclick = (e) => {
-        const index = parseInt(e.target.getAttribute('data-index'), 10);
+        e.stopPropagation();
+        const index = parseInt(btn.getAttribute('data-index'), 10);
         currentStyles.splice(index, 1);
         renderStyles();
       };
     });
+
+    document.querySelectorAll('.edit-style-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const index = parseInt(btn.getAttribute('data-index'), 10);
+        showEditModal(index);
+      };
+    });
+  }
+
+  function showEditModal(index) {
+    const style = currentStyles[index];
+    const card = document.querySelector(`.style-card[data-index="${index}"]`);
+    card.draggable = false;
+    card.classList.add('editing');
+    card.innerHTML = `
+      <div class="edit-form">
+        <div class="field-row">
+          <input type="text" id="editLabel" class="select-input" value="${style.label}" placeholder="Label">
+          <input type="text" id="editIcon" class="select-input" value="${style.icon}" style="width: 60px;" placeholder="Icon">
+        </div>
+        <textarea id="editCSS" class="select-input" rows="3" placeholder="CSS Code">${style.css}</textarea>
+        <div class="field-row" style="margin-top: 8px;">
+          <button id="saveEdit" class="primary-btn" style="padding: 6px 12px; font-size: 12px;">Update</button>
+          <button id="cancelEdit" class="secondary-btn" style="padding: 6px 12px; font-size: 12px; margin-top: 0;">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('#saveEdit').onclick = () => {
+      style.label = card.querySelector('#editLabel').value.trim();
+      style.icon = card.querySelector('#editIcon').value.trim();
+      style.css = card.querySelector('#editCSS').value.trim();
+      card.classList.remove('editing');
+      renderStyles();
+    };
+
+    card.querySelector('#cancelEdit').onclick = () => {
+      card.classList.remove('editing');
+      renderStyles();
+    };
   }
 
   // --- Drag and Drop Logic ---
 
   function handleDragStart(e) {
+    if (this.classList.contains('editing')) {
+      e.preventDefault();
+      return;
+    }
     this.classList.add('dragging');
     dragSrcEl = this;
     e.dataTransfer.effectAllowed = 'move';
@@ -120,9 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function handleDragOver(e) {
-    if (e.preventDefault) {
-      e.preventDefault();
-    }
+    if (e.preventDefault) e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     return false;
   }
@@ -130,15 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleDrop(e) {
     e.stopPropagation();
     e.preventDefault();
-
     if (dragSrcEl !== this) {
       const fromIndex = parseInt(dragSrcEl.dataset.index, 10);
       const toIndex = parseInt(this.dataset.index, 10);
-      
-      // Reorder array
       const item = currentStyles.splice(fromIndex, 1)[0];
       currentStyles.splice(toIndex, 0, item);
-      
       renderStyles();
     }
     return false;
@@ -150,6 +199,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Form Logic ---
 
+  toggleAddStyleBtn.onclick = () => {
+    addStyleContainer.style.display = 'block';
+    newStyleLabel.focus();
+  };
+
+  cancelAddStyleBtn.onclick = () => {
+    addStyleContainer.style.display = 'none';
+  };
+
   addStyleBtn.onclick = () => {
     const label = newStyleLabel.value.trim();
     const icon = newStyleIcon.value.trim() || '🖍️';
@@ -160,16 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    currentStyles.push({
-      id: 's' + Date.now(),
-      label,
-      icon,
-      css
-    });
-
-    newStyleLabel.value = '';
-    newStyleIcon.value = '';
-    newStyleCSS.value = '';
+    currentStyles.push({ id: 's' + Date.now(), label, icon, css });
+    newStyleLabel.value = ''; newStyleIcon.value = ''; newStyleCSS.value = '';
+    addStyleContainer.style.display = 'none';
     renderStyles();
   };
 
@@ -203,9 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.sync.set(settings, () => {
       status.textContent = 'Settings saved!';
       status.style.color = '#4caf50';
-      setTimeout(() => {
-        status.textContent = '';
-      }, 2000);
+      setTimeout(() => { status.textContent = ''; }, 2000);
     });
   });
 });

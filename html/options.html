@@ -12,6 +12,7 @@
     <div class="header">
       <img src="../icon/toolbar-icon.png" width="32" height="32" alt="Logo">
       <h1>Readwise Companion</h1>
+      <span id="status" style="margin-left: auto; font-size: 0.8rem; color: #4caf50; font-weight: 500;"></span>
     </div>
 
     <section class="section">
@@ -28,6 +29,7 @@
 
     <section class="section">
       <h2 class="section-title">Features</h2>
+      
       <div class="toggle-field">
         <div class="toggle-info">
           <span class="toggle-label">Floating Save Button</span>
@@ -72,27 +74,36 @@
         </label>
       </div>
 
-      <div class="field">
-        <label for="beforeSaveAction">Action Before Save (Page not in Reader)</label>
-        <select id="beforeSaveAction" class="select-input">
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Action Before Save</span>
+          <span class="toggle-desc">When page is not in Reader.</span>
+        </div>
+        <select id="beforeSaveAction" class="select-input right-input">
           <option value="save">Save to Reader</option>
           <option value="open_reader">Open Reader Dashboard</option>
           <option value="none">Nothing</option>
         </select>
       </div>
 
-      <div class="field">
-        <label for="afterSaveAction">Action After Save (Page already in Reader)</label>
-        <select id="afterSaveAction" class="select-input">
-          <option value="open_saved">Open current page in Reader</option>
-          <option value="delete">Delete page in Reader</option>
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Action After Save</span>
+          <span class="toggle-desc">When page is already in Reader.</span>
+        </div>
+        <select id="afterSaveAction" class="select-input right-input">
+          <option value="open_saved">Open in Reader</option>
+          <option value="delete">Delete in Reader</option>
           <option value="none">Nothing</option>
         </select>
       </div>
 
-      <div class="field">
-        <label for="defaultLocation">Default Save Location (Reader)</label>
-        <select id="defaultLocation" class="select-input">
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Default Save Location</span>
+          <span class="toggle-desc">Triage destination for new documents.</span>
+        </div>
+        <select id="defaultLocation" class="select-input right-input">
           <option value="new">New</option>
           <option value="later">Later</option>
           <option value="archive">Archive</option>
@@ -100,35 +111,37 @@
         </select>
       </div>
 
-      <div class="field">
-        <label for="maxStylesToDisplay">Max Styles in Selection Menu</label>
-        <div class="input-with-label">
-          <input type="number" id="maxStylesToDisplay" class="select-input" min="1" max="10" placeholder="4">
-          <span class="help">Number of quick-access buttons to show.</span>
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Max Styles in Menu</span>
+          <span class="toggle-desc">Quick-access buttons to show.</span>
         </div>
+        <input type="number" id="maxStylesToDisplay" class="select-input right-input" min="1" max="10" placeholder="4">
       </div>
 
-      <div class="field">
-        <label for="toolbarVerticalPosition">Toolbar Vertical Position</label>
-        <select id="toolbarVerticalPosition" class="select-input">
-          <option value="above">Above Selection</option>
-          <option value="below">Below Selection</option>
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Toolbar Vertical Position</span>
+          <span class="toggle-desc">Relative to selection.</span>
+        </div>
+        <select id="toolbarVerticalPosition" class="select-input right-input">
+          <option value="above">Above</option>
+          <option value="below">Below</option>
         </select>
       </div>
 
-      <div class="field">
-        <label for="toolbarHorizontalOffset">Toolbar Horizontal Offset (px)</label>
-        <div class="input-with-label">
-          <input type="number" id="toolbarHorizontalOffset" class="select-input" placeholder="0">
-          <span class="help">Negative for left, positive for right.</span>
+      <div class="toggle-field">
+        <div class="toggle-info">
+          <span class="toggle-label">Toolbar Horizontal Offset</span>
+          <span class="toggle-desc">Shift left (-) or right (+).</span>
         </div>
+        <input type="number" id="toolbarHorizontalOffset" class="select-input right-input" placeholder="0">
       </div>
 
-      <div class="field">
+      <div class="field" style="margin-top: 2rem;">
         <label for="excludedUrls">Excluded URLs (One per line, allows wildcard *)</label>
         <textarea id="excludedUrls" class="select-input" rows="4" placeholder="e.g. *.google.com/*
 internal.app/*"></textarea>
-        <span class="help">The extension will be disabled on pages matching these patterns.</span>
       </div>
     </section>
 
@@ -157,7 +170,7 @@ internal.app/*"></textarea>
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" style="border-top: 1px solid #f2f3f5; padding-top: 2rem;">
       <h2 class="section-title">About</h2>
       <div class="about-info">
         <p>Yet Another Readwise Highlighter <span id="version"></span></p>
@@ -165,11 +178,6 @@ internal.app/*"></textarea>
           without disturbing the flow.</p>
       </div>
     </section>
-
-    <div class="footer-actions">
-      <button id="save" class="primary-btn">Save Changes</button>
-      <span id="status"></span>
-    </div>
 
     <div class="copyright-footer">
       &copy; 2026 Lightmarey.

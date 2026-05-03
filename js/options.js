@@ -23,18 +23,21 @@ const TRASH_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" 
 const EDIT_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 
 document.addEventListener('DOMContentLoaded', () => {
-  const tokenInput = document.getElementById('accessToken');
-  const enableFABCheckbox = document.getElementById('enableFAB');
-  const enableToolbarCheckbox = document.getElementById('enableToolbar');
-  const checkStatusCheckbox = document.getElementById('checkPageStatus');
-  const quickSaveCheckbox = document.getElementById('quickSaveSelection');
-  const beforeSaveSelect = document.getElementById('beforeSaveAction');
-  const afterSaveSelect = document.getElementById('afterSaveAction');
-  const maxStylesInput = document.getElementById('maxStylesToDisplay');
-  const defaultLocationSelect = document.getElementById('defaultLocation');
-  const verticalPosSelect = document.getElementById('toolbarVerticalPosition');
-  const horizontalOffsetInput = document.getElementById('toolbarHorizontalOffset');
-  const excludedUrlsTextarea = document.getElementById('excludedUrls');
+  const inputs = {
+    readwiseToken: document.getElementById('accessToken'),
+    enableFAB: document.getElementById('enableFAB'),
+    enableToolbar: document.getElementById('enableToolbar'),
+    checkPageStatus: document.getElementById('checkPageStatus'),
+    quickSaveSelection: document.getElementById('quickSaveSelection'),
+    beforeSaveAction: document.getElementById('beforeSaveAction'),
+    afterSaveAction: document.getElementById('afterSaveAction'),
+    maxStylesToDisplay: document.getElementById('maxStylesToDisplay'),
+    defaultLocation: document.getElementById('defaultLocation'),
+    toolbarVerticalPosition: document.getElementById('toolbarVerticalPosition'),
+    toolbarHorizontalOffset: document.getElementById('toolbarHorizontalOffset'),
+    excludedUrls: document.getElementById('excludedUrls')
+  };
+
   const stylesList = document.getElementById('stylesList');
   const toggleAddStyleBtn = document.getElementById('toggleAddStyle');
   const addStyleContainer = document.getElementById('addStyleContainer');
@@ -43,35 +46,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const newStyleCSS = document.getElementById('newStyleCSS');
   const addStyleBtn = document.getElementById('addStyle');
   const cancelAddStyleBtn = document.getElementById('cancelAddStyle');
-  const saveButton = document.getElementById('save');
   const status = document.getElementById('status');
   const versionSpan = document.getElementById('version');
 
   let currentStyles = [];
   let dragSrcEl = null;
+  let autoSaveTimeout = null;
 
   // Set version from manifest
   try {
     const manifest = chrome.runtime.getManifest();
     if (versionSpan) versionSpan.textContent = `v${manifest.version}`;
-  } catch (e) {
-    console.warn('Could not load version from manifest');
-  }
+  } catch (e) {}
 
   // Load settings
   chrome.storage.sync.get(DEFAULT_SETTINGS, (settings) => {
-    if (tokenInput) tokenInput.value = settings.readwiseToken || '';
-    if (enableFABCheckbox) enableFABCheckbox.checked = !!settings.enableFAB;
-    if (enableToolbarCheckbox) enableToolbarCheckbox.checked = !!settings.enableToolbar;
-    if (checkStatusCheckbox) checkStatusCheckbox.checked = !!settings.checkPageStatus;
-    if (quickSaveCheckbox) quickSaveCheckbox.checked = !!settings.quickSaveSelection;
-    if (beforeSaveSelect) beforeSaveSelect.value = settings.beforeSaveAction || 'save';
-    if (afterSaveSelect) afterSaveSelect.value = settings.afterSaveAction || 'open_saved';
-    if (maxStylesInput) maxStylesInput.value = settings.maxStylesToDisplay || 4;
-    if (defaultLocationSelect) defaultLocationSelect.value = settings.defaultLocation || 'new';
-    if (verticalPosSelect) verticalPosSelect.value = settings.toolbarVerticalPosition || 'above';
-    if (horizontalOffsetInput) horizontalOffsetInput.value = settings.toolbarHorizontalOffset ?? 0;
-    if (excludedUrlsTextarea) excludedUrlsTextarea.value = settings.excludedUrls || '';
+    Object.keys(inputs).forEach(key => {
+      const el = inputs[key];
+      if (!el) return;
+      if (el.type === 'checkbox') {
+        el.checked = !!settings[key];
+      } else {
+        el.value = settings[key] ?? DEFAULT_SETTINGS[key];
+      }
+      
+      // Attach auto-save listeners
+      const eventType = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
+      el.addEventListener(eventType, () => debounceSave());
+    });
     
     currentStyles = settings.annotationStyles || DEFAULT_SETTINGS.annotationStyles;
     renderStyles();
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const index = parseInt(btn.getAttribute('data-index'), 10);
         currentStyles.splice(index, 1);
         renderStyles();
+        debounceSave();
       };
     });
 
@@ -153,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
       style.css = card.querySelector('#editCSS').value.trim();
       card.classList.remove('editing');
       renderStyles();
+      debounceSave();
     };
 
     card.querySelector('#cancelEdit').onclick = () => {
@@ -161,100 +165,76 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function debounceSave() {
+    status.textContent = 'Syncing...';
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(() => saveAllSettings(), 500);
+  }
+
+  function saveAllSettings() {
+    const settings = {
+      readwiseToken: inputs.readwiseToken.value.trim(),
+      enableFAB: inputs.enableFAB.checked,
+      enableToolbar: inputs.enableToolbar.checked,
+      checkPageStatus: inputs.checkPageStatus.checked,
+      quickSaveSelection: inputs.quickSaveSelection.checked,
+      beforeSaveAction: inputs.beforeSaveAction.value,
+      afterSaveAction: inputs.afterSaveAction.value,
+      maxStylesToDisplay: parseInt(inputs.maxStylesToDisplay.value, 10) || 4,
+      defaultLocation: inputs.defaultLocation.value,
+      toolbarVerticalPosition: inputs.toolbarVerticalPosition.value,
+      toolbarHorizontalOffset: parseInt(inputs.toolbarHorizontalOffset.value, 10) || 0,
+      excludedUrls: inputs.excludedUrls.value.trim(),
+      annotationStyles: currentStyles
+    };
+
+    chrome.storage.sync.set(settings, () => {
+      status.textContent = 'Changes Saved';
+      setTimeout(() => { if (status.textContent === 'Changes Saved') status.textContent = ''; }, 2000);
+    });
+  }
+
   // --- Drag and Drop Logic ---
 
   function handleDragStart(e) {
-    if (this.classList.contains('editing')) {
-      e.preventDefault();
-      return;
-    }
+    if (this.classList.contains('editing')) { e.preventDefault(); return; }
     this.classList.add('dragging');
     dragSrcEl = this;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', this.dataset.index);
   }
 
-  function handleDragOver(e) {
-    if (e.preventDefault) e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-  }
+  function handleDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
 
   function handleDrop(e) {
-    e.stopPropagation();
-    e.preventDefault();
+    e.stopPropagation(); e.preventDefault();
     if (dragSrcEl !== this) {
       const fromIndex = parseInt(dragSrcEl.dataset.index, 10);
       const toIndex = parseInt(this.dataset.index, 10);
       const item = currentStyles.splice(fromIndex, 1)[0];
       currentStyles.splice(toIndex, 0, item);
       renderStyles();
+      debounceSave();
     }
     return false;
   }
 
-  function handleDragEnd() {
-    this.classList.remove('dragging');
-  }
+  function handleDragEnd() { this.classList.remove('dragging'); }
 
   // --- Form Logic ---
 
-  toggleAddStyleBtn.onclick = () => {
-    addStyleContainer.style.display = 'block';
-    newStyleLabel.focus();
-  };
-
-  cancelAddStyleBtn.onclick = () => {
-    addStyleContainer.style.display = 'none';
-  };
+  toggleAddStyleBtn.onclick = () => { addStyleContainer.style.display = 'block'; newStyleLabel.focus(); };
+  cancelAddStyleBtn.onclick = () => { addStyleContainer.style.display = 'none'; };
 
   addStyleBtn.onclick = () => {
     const label = newStyleLabel.value.trim();
     const icon = newStyleIcon.value.trim() || '🖍️';
     const css = newStyleCSS.value.trim();
-
-    if (!label || !css) {
-      alert('Label and CSS are required');
-      return;
-    }
-
+    if (!label || !css) { alert('Label and CSS are required'); return; }
     currentStyles.push({ id: 's' + Date.now(), label, icon, css });
     newStyleLabel.value = ''; newStyleIcon.value = ''; newStyleCSS.value = '';
     addStyleContainer.style.display = 'none';
     renderStyles();
+    debounceSave();
   };
-
-  // Save settings
-  saveButton.addEventListener('click', () => {
-    const settings = {
-      readwiseToken: tokenInput.value.trim(),
-      enableFAB: enableFABCheckbox.checked,
-      enableToolbar: enableToolbarCheckbox.checked,
-      checkPageStatus: checkStatusCheckbox.checked,
-      quickSaveSelection: quickSaveCheckbox.checked,
-      beforeSaveAction: beforeSaveSelect.value,
-      afterSaveAction: afterSaveSelect.value,
-      maxStylesToDisplay: parseInt(maxStylesInput.value, 10) || 4,
-      defaultLocation: defaultLocationSelect.value,
-      toolbarVerticalPosition: verticalPosSelect.value,
-      toolbarHorizontalOffset: parseInt(horizontalOffsetInput.value, 10) || 0,
-      excludedUrls: excludedUrlsTextarea.value.trim(),
-      annotationStyles: currentStyles
-    };
-
-    if (!settings.readwiseToken) {
-      status.textContent = 'Token is required.';
-      status.style.color = '#ea4f3d';
-      return;
-    }
-
-    status.textContent = 'Saving...';
-    status.style.color = '#6a6a6b';
-
-    chrome.storage.sync.set(settings, () => {
-      status.textContent = 'Settings saved!';
-      status.style.color = '#4caf50';
-      setTimeout(() => { status.textContent = ''; }, 2000);
-    });
-  });
 });

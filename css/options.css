@@ -100,8 +100,16 @@ input[type="password"]:focus,
 .toggle-field {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center; /* Changed from flex-start for better alignment */
   margin-bottom: 1.5rem;
+}
+
+.right-input {
+  width: 140px !important;
+  min-width: 140px !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.9rem !important;
+  box-sizing: border-box;
 }
 
 .toggle-info {

@@ -7,93 +7,81 @@
   let settings = {
     enableFAB: true,
     enableToolbar: true,
-    defaultColor: 'yellow',
     defaultLocation: 'new',
     quickSaveSelection: false,
+    maxStylesToDisplay: 4,
     toolbarVerticalPosition: 'above',
-    toolbarHorizontalOffset: 0
+    toolbarHorizontalOffset: 0,
+    excludedUrls: '',
+    annotationStyles: []
   };
 
   // --- Core Initialization ---
 
   function init() {
-    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultColor', 'defaultLocation', 'quickSaveSelection', 'toolbarVerticalPosition', 'toolbarHorizontalOffset'], (data) => {
+    chrome.storage.sync.get(['enableFAB', 'enableToolbar', 'defaultLocation', 'quickSaveSelection', 'maxStylesToDisplay', 'toolbarVerticalPosition', 'toolbarHorizontalOffset', 'excludedUrls', 'annotationStyles'], (data) => {
       Object.assign(settings, data);
+      if (isUrlExcluded()) return;
       updateUI();
+      addListeners();
+    });
+  }
+
+  function isUrlExcluded() {
+    const currentUrl = window.location.href;
+    const excludedPatterns = settings.excludedUrls;
+    if (!excludedPatterns || excludedPatterns.trim() === '') return false;
+    const patterns = excludedPatterns.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+    return patterns.some(pattern => {
+      let p = pattern;
+      if (!p.includes('://')) p = '*://' + p;
+      const protocolSplit = p.split('://');
+      if (protocolSplit.length > 1 && !protocolSplit[1].includes('/')) p = p + '/*';
+      const regexStr = '^' + p.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$';
+      try { return new RegExp(regexStr, 'i').test(currentUrl); } catch (e) { return false; }
     });
   }
 
   init();
 
   chrome.storage.onChanged.addListener((changes) => {
-    for (let [key, { newValue }] of Object.entries(changes)) {
-      settings[key] = newValue;
-    }
+    for (let [key, { newValue }] of Object.entries(changes)) { settings[key] = newValue; }
     updateUI();
   });
 
   function updateUI() {
-    if (settings.enableFAB) {
-      createFAB();
-    } else if (fab) {
-      fab.remove();
-      fab = null;
-    }
+    if (isUrlExcluded()) { if (fab) { fab.remove(); fab = null; } if (toolbar) { toolbar.style.display = 'none'; } return; }
+    if (settings.enableFAB) createFAB();
+    else if (fab) { fab.remove(); fab = null; }
   }
 
   function createShadowRoot() {
     if (shadowRoot) return shadowRoot;
     const container = document.createElement('div');
     container.id = 'readwise-companion-root';
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '0';
-    container.style.height = '0';
-    container.style.zIndex = '2147483647';
+    container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '0';
+    container.style.width = '0'; container.style.height = '0'; container.style.zIndex = '2147483647';
     document.body.appendChild(container);
     shadowRoot = container.attachShadow({ mode: 'open' });
-    
     const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = chrome.runtime.getURL('css/content.css');
+    link.rel = 'stylesheet'; link.href = chrome.runtime.getURL('css/content.css');
     shadowRoot.appendChild(link);
-    
     return shadowRoot;
   }
-
-  // --- Notification Logic ---
 
   function showNotification(text, type = 'info') {
     const root = createShadowRoot();
     let notification = root.querySelector('.rw-notification');
-    
-    if (!notification) {
-      notification = document.createElement('div');
-      notification.className = 'rw-notification';
-      root.appendChild(notification);
-    }
-    
-    notification.textContent = text;
-    notification.setAttribute('data-type', type);
-    
-    notification.classList.remove('visible');
-    void notification.offsetWidth;
-    notification.classList.add('visible');
-
+    if (!notification) { notification = document.createElement('div'); notification.className = 'rw-notification'; root.appendChild(notification); }
+    notification.textContent = text; notification.setAttribute('data-type', type);
+    notification.classList.remove('visible'); void notification.offsetWidth; notification.classList.add('visible');
     if (notificationTimeout) clearTimeout(notificationTimeout);
-    
-    if (type !== 'loading') {
-      notificationTimeout = setTimeout(() => {
-        notification.classList.remove('visible');
-      }, 3000);
-    }
+    if (type !== 'loading') notificationTimeout = setTimeout(() => { notification.classList.remove('visible'); }, 3000);
   }
 
   function playSound(name) {
     const url = chrome.runtime.getURL(`audio/${name}.m4a`);
-    const audio = new Audio(url);
-    audio.play().catch(e => console.warn('Audio play failed:', e));
+    const audio = new Audio(url); audio.play().catch(e => console.warn('Audio play failed:', e));
   }
 
   // --- FAB ---
@@ -102,73 +90,34 @@
     if (fab) return fab;
     const root = createShadowRoot();
     fab = document.createElement('div');
-    fab.className = 'rw-fab';
-    fab.title = 'Save page to Readwise';
-    
-    const img = document.createElement('img');
-    img.src = chrome.runtime.getURL('icon/toolbar-icon.png');
+    fab.className = 'rw-fab'; fab.title = 'Save page to Readwise';
+    const img = document.createElement('img'); img.src = chrome.runtime.getURL('icon/toolbar-icon.png');
     fab.appendChild(img);
-    
-    let isDragging = false;
-    let startX, startY, initialX, initialY;
-
+    let isDragging = false; let startX, startY, initialX, initialY;
     const onPointerMove = (e) => {
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-        isDragging = true;
-        fab.style.left = `${initialX + dx}px`;
-        fab.style.top = `${initialY + dy}px`;
-        fab.style.right = 'auto';
-        fab.style.bottom = 'auto';
-      }
+      const dx = e.clientX - startX; const dy = e.clientY - startY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) { isDragging = true; fab.style.left = `${initialX + dx}px`; fab.style.top = `${initialY + dy}px`; fab.style.right = 'auto'; fab.style.bottom = 'auto'; }
     };
-
     const onPointerUp = (e) => {
-      fab.releasePointerCapture(e.pointerId);
-      fab.removeEventListener('pointermove', onPointerMove);
-      fab.removeEventListener('pointerup', onPointerUp);
-      fab.removeEventListener('pointercancel', onPointerUp);
-      
-      if (!isDragging) {
-        if (fab.classList.contains('loading')) return;
-        handleSavePage();
-      }
+      fab.releasePointerCapture(e.pointerId); fab.removeEventListener('pointermove', onPointerMove);
+      fab.removeEventListener('pointerup', onPointerUp); fab.removeEventListener('pointercancel', onPointerUp);
+      if (!isDragging) { if (fab.classList.contains('loading')) return; handleSavePage(); }
     };
-
     fab.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      fab.setPointerCapture(e.pointerId);
-      isDragging = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      const rect = fab.getBoundingClientRect();
-      initialX = rect.left;
-      initialY = rect.top;
-
-      fab.addEventListener('pointermove', onPointerMove);
-      fab.addEventListener('pointerup', onPointerUp);
-      fab.addEventListener('pointercancel', onPointerUp);
+      e.preventDefault(); fab.setPointerCapture(e.pointerId); isDragging = false;
+      startX = e.clientX; startY = e.clientY; const rect = fab.getBoundingClientRect(); initialX = rect.left; initialY = rect.top;
+      fab.addEventListener('pointermove', onPointerMove); fab.addEventListener('pointerup', onPointerUp); fab.addEventListener('pointercancel', onPointerUp);
     });
-    
-    root.appendChild(fab);
-    return fab;
+    root.appendChild(fab); return fab;
   }
 
   async function handleSavePage() {
     if (fab) fab.classList.add('loading');
     showNotification('Saving to Reader...', 'loading');
-    
     chrome.runtime.sendMessage({ action: 'save-page-request' }, (response) => {
       if (fab) fab.classList.remove('loading');
-      if (response && response.success) {
-        showNotification('Saved to Reader!', 'success');
-        playSound('saved');
-      } else {
-        const errorMsg = response ? response.error : 'Request failed';
-        showNotification(`Error: ${errorMsg}`, 'error');
-        playSound('error');
-      }
+      if (response && response.success) { showNotification('Saved to Reader!', 'success'); playSound('saved'); }
+      else { showNotification(`Error: ${response ? response.error : 'Request failed'}`, 'error'); playSound('error'); }
     });
   }
 
@@ -181,17 +130,25 @@
     toolbar.className = 'rw-toolbar';
     toolbar.style.display = 'none';
     
-    const colors = ['yellow', 'blue', 'green', 'pink', 'purple', 'orange'];
-    colors.forEach(color => {
-      const dot = document.createElement('div');
-      dot.className = 'rw-color-dot';
-      dot.setAttribute('data-color', color);
-      dot.title = `Highlight ${color}`;
-      dot.addEventListener('pointerdown', (e) => {
+    // Dynamic styles from settings
+    const allStyles = settings.annotationStyles && settings.annotationStyles.length > 0 
+      ? settings.annotationStyles 
+      : [{ id: 'default', label: 'Highlight', icon: '✨', css: 'background-color: #ffd845;' }];
+
+    // Only show the first 'n' styles based on settings
+    const n = Math.max(1, settings.maxStylesToDisplay || 4);
+    const displayStyles = allStyles.slice(0, n);
+
+    displayStyles.forEach(style => {
+      const btn = document.createElement('button');
+      btn.className = 'rw-btn';
+      btn.innerHTML = style.icon;
+      btn.title = style.label;
+      btn.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
-        handleHighlightAction('highlight', color);
+        handleHighlightAction('highlight', style);
       });
-      toolbar.appendChild(dot);
+      toolbar.appendChild(btn);
     });
 
     const divider = document.createElement('div');
@@ -204,7 +161,8 @@
     noteBtn.title = 'Add Note';
     noteBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
-      handleHighlightAction('note', settings.defaultColor);
+      // Default to #1 style for note
+      handleHighlightAction('note', allStyles[0]);
     });
     toolbar.appendChild(noteBtn);
 
@@ -222,7 +180,7 @@
     return toolbar;
   }
 
-  function handleHighlightAction(mode, color) {
+  function handleHighlightAction(mode, styleObj) {
     if (!activeSelection) return;
     const { text, range, rect, html } = activeSelection;
     hideToolbar();
@@ -235,13 +193,13 @@
     if (mode === 'note' || mode === 'reader') {
       showNoteUI(rect, { mode, existingNote: '', existingTags: [], existingLocation: settings.defaultLocation }, (data) => {
         if (mode === 'note') {
-          executeSaveHighlight(text, range, color, data.note);
+          executeSaveHighlight(text, range, styleObj, data.note);
         } else {
           executeSaveToReaderHtml(html, text, range, data.tags, data.note, data.location, true);
         }
       });
     } else {
-      executeSaveHighlight(text, range, color);
+      executeSaveHighlight(text, range, styleObj);
     }
   }
 
@@ -249,48 +207,22 @@
     const root = createShadowRoot();
     const noteContainer = document.createElement('div');
     noteContainer.className = 'rw-note-container';
-    
-    let tagInput = null;
-    let locationSelect = null;
-
+    let tagInput = null; let locationSelect = null;
     if (options.mode === 'reader') {
-      const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.gap = '8px';
-      row.style.marginBottom = '8px';
-
-      tagInput = document.createElement('input');
-      tagInput.type = 'text';
-      tagInput.placeholder = 'Tags...';
-      tagInput.className = 'rw-tag-input';
-      tagInput.style.flex = '1';
-      tagInput.value = (options.existingTags || []).join(', ');
-
-      locationSelect = document.createElement('select');
-      locationSelect.className = 'rw-tag-input';
-      locationSelect.style.width = 'auto';
+      const row = document.createElement('div'); row.style.display = 'flex'; row.style.gap = '8px'; row.style.marginBottom = '8px';
+      tagInput = document.createElement('input'); tagInput.type = 'text'; tagInput.placeholder = 'Tags...'; tagInput.className = 'rw-tag-input'; tagInput.style.flex = '1'; tagInput.value = (options.existingTags || []).join(', ');
+      locationSelect = document.createElement('select'); locationSelect.className = 'rw-tag-input'; locationSelect.style.width = 'auto';
       ['new', 'later', 'archive', 'feed'].forEach(loc => {
-        const opt = document.createElement('option');
-        opt.value = loc;
-        opt.textContent = loc.charAt(0).toUpperCase() + loc.slice(1);
+        const opt = document.createElement('option'); opt.value = loc; opt.textContent = loc.charAt(0).toUpperCase() + loc.slice(1);
         if (loc === (options.existingLocation || settings.defaultLocation)) opt.selected = true;
         locationSelect.appendChild(opt);
       });
-
-      row.appendChild(tagInput);
-      row.appendChild(locationSelect);
-      noteContainer.appendChild(row);
+      row.appendChild(tagInput); row.appendChild(locationSelect); noteContainer.appendChild(row);
     }
-
-    const textarea = document.createElement('textarea');
-    textarea.placeholder = options.mode === 'reader' ? 'Add a note...' : 'Add highlight note...';
-    textarea.className = 'rw-note-input';
-    textarea.value = options.existingNote || '';
+    const textarea = document.createElement('textarea'); textarea.placeholder = options.mode === 'reader' ? 'Add a note...' : 'Add highlight note...';
+    textarea.className = 'rw-note-input'; textarea.value = options.existingNote || '';
     noteContainer.appendChild(textarea);
-    
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'rw-btn rw-btn-primary';
-    saveBtn.textContent = options.mode === 'reader' ? 'Save to Reader' : 'Save Note';
+    const saveBtn = document.createElement('button'); saveBtn.className = 'rw-btn rw-btn-primary'; saveBtn.textContent = options.mode === 'reader' ? 'Save to Reader' : 'Save Note';
     saveBtn.onclick = () => {
       const note = textarea.value.trim();
       const tags = tagInput ? tagInput.value.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
@@ -298,82 +230,54 @@
       onSave({ note, tags, location });
       noteContainer.remove();
     };
-
     noteContainer.appendChild(saveBtn);
-    
-    const scrollX = window.scrollX || window.pageXOffset;
-    const scrollY = window.scrollY || window.pageYOffset;
-    
-    // Position logic respecting settings
-    const offset = settings.toolbarHorizontalOffset || 0;
-    noteContainer.style.left = `${Math.max(10, rect.left + scrollX + offset)}px`;
-    noteContainer.style.top = `${rect.bottom + scrollY + 10}px`;
-    
-    root.appendChild(noteContainer);
-    setTimeout(() => (tagInput || textarea).focus(), 50);
-
-    const dismisser = (e) => {
-      const path = e.composedPath();
-      if (noteContainer && !path.includes(noteContainer)) {
-        noteContainer.remove();
-        document.removeEventListener('mousedown', dismisser);
-      }
-    };
+    const scrollX = window.scrollX || window.pageXOffset; const scrollY = window.scrollY || window.pageYOffset; const offset = settings.toolbarHorizontalOffset || 0;
+    noteContainer.style.left = `${Math.max(10, rect.left + scrollX + offset)}px`; noteContainer.style.top = `${rect.bottom + scrollY + 10}px`;
+    root.appendChild(noteContainer); setTimeout(() => (tagInput || textarea).focus(), 50);
+    const dismisser = (e) => { const path = e.composedPath(); if (noteContainer && !path.includes(noteContainer)) { noteContainer.remove(); document.removeEventListener('mousedown', dismisser); } };
     document.addEventListener('mousedown', dismisser);
   }
 
-  function executeSaveHighlight(text, range, color, note = '', existingMark = null) {
+  function executeSaveHighlight(text, range, styleObj, note = '', existingMark = null) {
     showNotification(note ? 'Saving with note...' : 'Saving highlight...', 'loading');
     playSound('select');
-
     chrome.runtime.sendMessage({
       action: 'save-highlight',
-      data: { text, note, color, title: document.title, url: window.location.href }
+      data: { text, note, title: document.title, url: window.location.href }
     }, (response) => {
       if (response && response.success) {
-        showNotification('Highlight saved!', 'success');
-        playSound('saved');
+        showNotification('Highlight saved!', 'success'); playSound('saved');
         if (existingMark) updateExistingHighlight(existingMark, note);
-        else applyVisualHighlight(range, color, response.id, note);
+        else applyVisualHighlight(range, styleObj, response.id, note);
         activeSelection = null;
-      } else {
-        showNotification(`Error: ${response ? response.error : 'API Request Failed'}`, 'error');
-        playSound('error');
-      }
+      } else { showNotification(`Error: ${response ? response.error : 'API Request Failed'}`, 'error'); playSound('error'); }
     });
   }
 
   function executeSaveToReaderHtml(html, text, range, tags, notes, location, shouldMark = true, existingMark = null) {
     showNotification('Saving selection to Reader...', 'loading');
     playSound('select');
-
     chrome.runtime.sendMessage({
       action: 'save-reader-html',
       data: { url: window.location.href, html, title: document.title, tags, notes, location }
     }, (response) => {
       if (response && response.success) {
-        showNotification('Selection saved to Reader!', 'success');
-        playSound('saved');
+        showNotification('Selection saved to Reader!', 'success'); playSound('saved');
         if (existingMark) updateExistingReaderSave(existingMark, tags, notes);
         else if (shouldMark) applyReaderSaveHighlight(range, response.id, tags, notes);
         activeSelection = null;
-      } else {
-        showNotification(`Error: ${response ? response.error : 'API Request Failed'}`, 'error');
-        playSound('error');
-      }
+      } else { showNotification(`Error: ${response ? response.error : 'API Request Failed'}`, 'error'); playSound('error'); }
     });
   }
 
-  function applyVisualHighlight(range, color, id, note) {
+  function applyVisualHighlight(range, styleObj, id, note) {
     try {
       const mark = document.createElement('mark');
       mark.className = 'rw-highlight';
-      mark.style.backgroundColor = getHexColor(color);
+      mark.setAttribute('style', styleObj.css);
       if (id) mark.setAttribute('data-rw-id', id);
       if (note) { mark.setAttribute('data-has-note', 'true'); mark.setAttribute('data-note-text', note); }
-      const contents = range.extractContents();
-      mark.appendChild(contents);
-      range.insertNode(mark);
+      const contents = range.extractContents(); mark.appendChild(contents); range.insertNode(mark);
       window.getSelection().removeAllRanges();
     } catch (e) { console.error('Highlight failed:', e); }
   }
@@ -385,9 +289,7 @@
       if (id) mark.setAttribute('data-reader-id', id);
       if (tags) mark.setAttribute('data-tags', JSON.stringify(tags));
       if (notes) mark.setAttribute('data-notes', notes);
-      const contents = range.extractContents();
-      mark.appendChild(contents);
-      range.insertNode(mark);
+      const contents = range.extractContents(); mark.appendChild(contents); range.insertNode(mark);
       window.getSelection().removeAllRanges();
     } catch (e) { console.error('Reader save failed:', e); }
   }
@@ -402,11 +304,6 @@
     if (notes) mark.setAttribute('data-notes', notes);
   }
 
-  function getHexColor(color) {
-    const map = { yellow: '#ffd845', blue: '#a3c8ff', green: '#a1eb7d', pink: '#ffadc4', purple: '#cdb5ff', orange: '#ffdfac' };
-    return map[color] || map.yellow;
-  }
-
   // --- Context Menu Logic ---
 
   function showHighlightActions(mark, rect) {
@@ -419,7 +316,9 @@
     noteBtn.onclick = () => {
       actionMenu.remove();
       const existingNote = mark.getAttribute('data-note-text') || '';
-      showNoteUI(rect, { mode: 'note', existingNote }, (data) => { executeSaveHighlight(mark.textContent, null, null, data.note, mark); });
+      // Default to #1 style for existing note updates
+      const defaultStyle = settings.annotationStyles[0] || { css: '' };
+      showNoteUI(rect, { mode: 'note', existingNote }, (data) => { executeSaveHighlight(mark.textContent, null, defaultStyle, data.note, mark); });
     };
     const removeBtn = document.createElement('button');
     removeBtn.className = 'rw-btn';
@@ -482,63 +381,60 @@
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
     const offset = settings.toolbarHorizontalOffset || 0;
-    
     el.style.left = `${rect.left + scrollX + (rect.width / 2) - 40 + offset}px`;
-    
-    if (settings.toolbarVerticalPosition === 'below') {
-      el.style.top = `${rect.bottom + scrollY + 10}px`;
-    } else {
-      el.style.top = `${rect.top + scrollY - 45}px`;
-    }
+    if (settings.toolbarVerticalPosition === 'below') el.style.top = `${rect.bottom + scrollY + 10}px`;
+    else el.style.top = `${rect.top + scrollY - 45}px`;
     el.style.display = 'flex';
   }
 
   function showToolbar(rect) {
-    if (!settings.enableToolbar) return;
+    if (!settings.enableToolbar || isUrlExcluded()) return;
+    if (toolbar) { toolbar.remove(); toolbar = null; } // Always recreate to reflect setting changes
     const tb = createToolbar();
     const scrollX = window.scrollX || window.pageXOffset;
     const scrollY = window.scrollY || window.pageYOffset;
     const offset = settings.toolbarHorizontalOffset || 0;
+    const count = Math.max(1, settings.maxStylesToDisplay || 4);
+    const tbWidth = (count * 32) + 80; // Estimated width: buttons + divider + note + reader
     
-    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - 110 + offset}px`;
-    
-    if (settings.toolbarVerticalPosition === 'below') {
-      tb.style.top = `${rect.bottom + scrollY + 10}px`;
-    } else {
-      tb.style.top = `${rect.top + scrollY - 50}px`;
-    }
+    tb.style.left = `${rect.left + scrollX + (rect.width / 2) - (tbWidth / 2) + offset}px`;
+    if (settings.toolbarVerticalPosition === 'below') tb.style.top = `${rect.bottom + scrollY + 10}px`;
+    else tb.style.top = `${rect.top + scrollY - 50}px`;
     tb.style.display = 'flex';
   }
 
-  function hideToolbar() { if (toolbar) toolbar.style.display = 'none'; }
+  function hideToolbar() { if (toolbar) { toolbar.style.display = 'none'; } }
   function getRangeHtml(range) { const div = document.createElement('div'); div.appendChild(range.cloneContents()); return div.innerHTML; }
 
   // --- Event Listeners ---
 
-  document.addEventListener('mouseup', (e) => {
-    const path = e.composedPath();
-    if (shadowRoot && path.includes(shadowRoot.host)) return;
-    setTimeout(() => {
-      const selection = window.getSelection();
-      const text = selection.toString().trim();
-      if (text && text.length > 0) {
-        const range = selection.getRangeAt(0).cloneRange();
-        const rect = range.getBoundingClientRect();
-        const html = getRangeHtml(range);
-        activeSelection = { text, range, rect, html };
-        showToolbar(rect);
-      } else hideToolbar();
-    }, 10);
-  });
+  function addListeners() {
+    document.addEventListener('mouseup', (e) => {
+      const path = e.composedPath();
+      if (shadowRoot && path.includes(shadowRoot.host)) return;
+      if (isUrlExcluded()) return;
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const text = selection.toString().trim();
+        if (text && text.length > 0) {
+          const range = selection.getRangeAt(0).cloneRange();
+          const rect = range.getBoundingClientRect();
+          const html = getRangeHtml(range);
+          activeSelection = { text, range, rect, html };
+          showToolbar(rect);
+        } else hideToolbar();
+      }, 10);
+    });
 
-  document.addEventListener('click', (e) => {
-    const path = e.composedPath();
-    if (selectionExists()) return;
-    const highlight = path.find(el => el.classList && el.classList.contains('rw-highlight'));
-    if (highlight) { showHighlightActions(highlight, highlight.getBoundingClientRect()); return; }
-    const readerSave = path.find(el => el.classList && el.classList.contains('rw-reader-save'));
-    if (readerSave) { showReaderSaveActions(readerSave, readerSave.getBoundingClientRect()); return; }
-  });
+    document.addEventListener('click', (e) => {
+      const path = e.composedPath();
+      if (selectionExists() || isUrlExcluded()) return;
+      const highlight = path.find(el => el.classList && el.classList.contains('rw-highlight'));
+      if (highlight) { showHighlightActions(highlight, highlight.getBoundingClientRect()); return; }
+      const readerSave = path.find(el => el.classList && el.classList.contains('rw-reader-save'));
+      if (readerSave) { showReaderSaveActions(readerSave, readerSave.getBoundingClientRect()); return; }
+    });
+  }
 
   function selectionExists() {
     const selection = window.getSelection();
@@ -547,25 +443,10 @@
 
   chrome.runtime.onMessage.addListener((request) => {
     switch (request.action) {
-      case 'saving-started':
-        showNotification('Saving to Reader...', 'loading');
-        if (fab) fab.classList.add('loading');
-        break;
-      case 'saving-success':
-        showNotification('Saved to Reader!', 'success');
-        playSound('saved');
-        if (fab) fab.classList.remove('loading');
-        break;
-      case 'deletion-success':
-        showNotification('Document deleted from Reader', 'deletion');
-        playSound('select');
-        if (fab) fab.classList.remove('loading');
-        break;
-      case 'saving-error':
-        showNotification(`Error: ${request.error}`, 'error');
-        playSound('error');
-        if (fab) fab.classList.remove('loading');
-        break;
+      case 'saving-started': showNotification('Saving to Reader...', 'loading'); if (fab) fab.classList.add('loading'); break;
+      case 'saving-success': showNotification('Saved to Reader!', 'success'); playSound('saved'); if (fab) fab.classList.remove('loading'); break;
+      case 'deletion-success': showNotification('Document deleted from Reader', 'deletion'); playSound('select'); if (fab) fab.classList.remove('loading'); break;
+      case 'saving-error': showNotification(`Error: ${request.error}`, 'error'); playSound('error'); if (fab) fab.classList.remove('loading'); break;
     }
   });
 

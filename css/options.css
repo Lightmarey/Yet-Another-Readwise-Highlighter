@@ -196,6 +196,124 @@ input:checked + .slider:before {
   line-height: 1.4;
 }
 
+/* Styles Manager */
+.styles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+
+.style-card {
+  background: #f8f9fb;
+  border: 1px solid #eef0f2;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  cursor: grab;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.style-card:active {
+  cursor: grabbing;
+}
+
+.style-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.style-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none; /* Let the card handle the drag */
+}
+
+.style-card-header button {
+  pointer-events: auto; /* Buttons inside header still clickable */
+}
+
+.style-card-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drag-handle {
+  color: #a9aaab;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.delete-style-btn {
+  background: none;
+  border: none;
+  color: #ea4f3d;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 4px;
+  transition: opacity 0.2s;
+}
+
+.delete-style-btn:hover {
+  opacity: 0.7;
+}
+
+.style-preview {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e5e8ed;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-style-card {
+  background: #fff;
+  border: 2px dashed #e5e8ed;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 1rem;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.secondary-btn {
+  background: #f2f3f5;
+  color: #191919;
+  border: 1px solid #e5e8ed;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.secondary-btn:hover {
+  background: #e5e8ed;
+}
+
 .footer-actions {
   display: flex;
   align-items: center;

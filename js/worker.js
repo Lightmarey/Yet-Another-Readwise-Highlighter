@@ -1,6 +1,7 @@
 // Default settings constants
 const DEFAULT_SETTINGS = {
   readwiseToken: '',
+  theme: 'auto',
   enableFAB: true,
   enableToolbar: true,
   checkPageStatus: true,
@@ -123,6 +124,18 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ['action']
   });
 
+  chrome.contextMenus.create({
+    id: 'save-page-to-reader',
+    title: 'Save Page to Reader',
+    contexts: ['page']
+  });
+
+  chrome.contextMenus.create({
+    id: 'highlight-selection',
+    title: 'Highlight Selection',
+    contexts: ['selection']
+  });
+
   // Initialize default settings if they don't exist
   chrome.storage.sync.get(null, (items) => {
     const newSettings = {};
@@ -137,9 +150,13 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'open-settings') {
     chrome.runtime.openOptionsPage();
+  } else if (info.menuItemId === 'save-page-to-reader') {
+    sendMessageToTab(tab.id, { action: 'context-menu-save-page' });
+  } else if (info.menuItemId === 'highlight-selection') {
+    sendMessageToTab(tab.id, { action: 'context-menu-highlight' });
   }
 });
 

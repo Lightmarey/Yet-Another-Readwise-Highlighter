@@ -1,5 +1,6 @@
 const DEFAULT_SETTINGS = {
   readwiseToken: '',
+  theme: 'auto',
   enableFAB: true,
   enableToolbar: true,
   checkPageStatus: true,
@@ -12,9 +13,9 @@ const DEFAULT_SETTINGS = {
   toolbarHorizontalOffset: 0,
   excludedUrls: '',
   annotationStyles: [
-    { id: 'h1', label: 'Yellow', icon: '✨', css: 'background-color: #ffd845;' },
-    { id: 'h2', label: 'Blue Dot', icon: '🔹', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
-    { id: 'h3', label: 'Red Wavy', icon: '〰️', css: 'text-decoration: underline wavy red; background: transparent;' },
+    { id: 'h1', label: 'Yellow', icon: 'H', css: 'background-color: #ffd845;' },
+    { id: 'h2', label: 'Blue Dot', icon: 'B', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
+    { id: 'h3', label: 'Red Wavy', icon: 'R', css: 'text-decoration: underline wavy red; background: transparent;' },
     { id: 'h4', label: 'Bold Italic', icon: 'B/I', css: 'font-weight: bold; font-style: italic; background: transparent;' }
   ]
 };
@@ -48,10 +49,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelAddStyleBtn = document.getElementById('cancelAddStyle');
   const status = document.getElementById('status');
   const versionSpan = document.getElementById('version');
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
 
   let currentStyles = [];
   let dragSrcEl = null;
   let autoSaveTimeout = null;
+  let currentTheme = 'auto';
+
+  function updateThemeIcon(theme) {
+    themeIcon.className = 'fa-solid';
+    if (theme === 'auto') themeIcon.classList.add('fa-circle-half-stroke');
+    else if (theme === 'light') themeIcon.classList.add('fa-sun');
+    else if (theme === 'dark') themeIcon.classList.add('fa-moon');
+  }
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.classList.remove('theme-light', 'theme-dark');
+    if (theme === 'light') document.documentElement.classList.add('theme-light');
+    else if (theme === 'dark') document.documentElement.classList.add('theme-dark');
+    updateThemeIcon(theme);
+  }
+
+  themeToggle.onclick = () => {
+    const themes = ['auto', 'light', 'dark'];
+    const nextTheme = themes[(themes.indexOf(currentTheme) + 1) % themes.length];
+    applyTheme(nextTheme);
+    debounceSave();
+  };
 
   // Set version from manifest
   try {
@@ -72,9 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Attach auto-save listeners
       const eventType = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
-      el.addEventListener(eventType, () => debounceSave());
+      el.addEventListener(eventType, () => {
+        debounceSave();
+      });
     });
     
+    applyTheme(settings.theme || 'auto');
     currentStyles = settings.annotationStyles || DEFAULT_SETTINGS.annotationStyles;
     renderStyles();
   });
@@ -174,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveAllSettings() {
     const settings = {
       readwiseToken: inputs.readwiseToken.value.trim(),
+      theme: currentTheme,
       enableFAB: inputs.enableFAB.checked,
       enableToolbar: inputs.enableToolbar.checked,
       checkPageStatus: inputs.checkPageStatus.checked,
@@ -238,3 +268,4 @@ document.addEventListener('DOMContentLoaded', () => {
     debounceSave();
   };
 });
+);

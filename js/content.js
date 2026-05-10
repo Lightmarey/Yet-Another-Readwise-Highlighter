@@ -7,6 +7,7 @@
   
   // Explicit defaults for content script initialization
   let settings = {
+    theme: 'auto',
     enableFAB: true,
     enableToolbar: true,
     defaultLocation: 'new',
@@ -60,7 +61,19 @@
   });
 
   function updateUI() {
-    if (isUrlExcluded()) { if (fab) { fab.remove(); fab = null; } if (toolbar) { toolbar.style.display = 'none'; } return; }
+    if (isUrlExcluded()) { 
+      if (fab) { fab.remove(); fab = null; } 
+      if (toolbar) { toolbar.style.display = 'none'; } 
+      return; 
+    }
+    
+    // Apply Theme to Shadow Host
+    const root = createShadowRoot();
+    const host = root.host;
+    host.classList.remove('theme-light', 'theme-dark');
+    if (settings.theme === 'light') host.classList.add('theme-light');
+    else if (settings.theme === 'dark') host.classList.add('theme-dark');
+
     if (settings.enableFAB) createFAB();
     else if (fab) { fab.remove(); fab = null; }
   }
@@ -69,12 +82,20 @@
     if (shadowRoot) return shadowRoot;
     const container = document.createElement('div');
     container.id = 'readwise-companion-root';
-    container.style.position = 'fixed'; container.style.top = '0'; container.style.left = '0';
-    container.style.width = '0'; container.style.height = '0'; container.style.zIndex = '2147483647';
+    container.style.position = 'fixed'; 
+    container.style.top = '0'; 
+    container.style.left = '0';
+    container.style.width = '0'; 
+    container.style.height = '0'; 
+    container.style.zIndex = '2147483647';
+    // Z-Index Isolation
+    container.style.isolation = 'isolate';
+    
     document.body.appendChild(container);
     shadowRoot = container.attachShadow({ mode: 'open' });
     const link = document.createElement('link');
-    link.rel = 'stylesheet'; link.href = chrome.runtime.getURL('css/content.css');
+    link.rel = 'stylesheet'; 
+    link.href = chrome.runtime.getURL('css/content.css');
     shadowRoot.appendChild(link);
     return shadowRoot;
   }
@@ -82,7 +103,11 @@
   function showNotification(text, type = 'info') {
     const root = createShadowRoot();
     let notification = root.querySelector('.rw-notification');
-    if (!notification) { notification = document.createElement('div'); notification.className = 'rw-notification'; root.appendChild(notification); }
+    if (!notification) { 
+      notification = document.createElement('div'); 
+      notification.className = 'rw-notification'; 
+      root.appendChild(notification); 
+    }
     notification.textContent = text; notification.setAttribute('data-type', type);
     notification.classList.remove('visible'); void notification.offsetWidth; notification.classList.add('visible');
     if (notificationTimeout) clearTimeout(notificationTimeout);
@@ -143,7 +168,7 @@
     // Dynamic styles from settings
     const allStyles = settings.annotationStyles && settings.annotationStyles.length > 0 
       ? settings.annotationStyles 
-      : [{ id: 'default', label: 'Highlight', icon: '✨', css: 'background-color: #ffd845;' }];
+      : [{ id: 'default', label: 'Highlight', icon: 'H', css: 'background-color: #ffd845;' }];
 
     // Only show the first 'n' styles based on settings
     const n = Math.max(1, settings.maxStylesToDisplay || 4);
@@ -279,26 +304,97 @@
     });
   }
 
+  // --- Non-Destructive Highlighting ---
+
+  function wrapRangeWithMark(range, className, attributes = {}, style = '') {
+    const commonAncestor = range.commonAncestorContainer;
+    const root = commonAncestor.nodeType === Node.TEXT_NODE ? commonAncestor.parentNode : commonAncestor;
+    
+    // 1. Collect all text nodes within the range
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    const textNodes = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      // Precise intersection check
+      if (range.intersectsNode(node)) {
+        textNodes.push(node);
+      }
+    }
+
+    const marks = [];
+    textNodes.forEach(node => {
+      // Calculate offsets relative to THIS text node
+      let start = 0;
+      let end = node.length;
+
+      // Check if this node is at the start boundary
+      if (node === range.startContainer) {
+        start = range.startOffset;
+      } else if (range.startContainer.nodeType === Node.ELEMENT_NODE && node.parentNode === range.startContainer) {
+        // If container is element, check if node is BEFORE the start offset child
+        const index = Array.from(range.startContainer.childNodes).indexOf(node);
+        if (index < range.startOffset) return; // Skip
+        if (index === range.startOffset) start = 0; // Starts at beginning of this node
+      }
+
+      // Check if this node is at the end boundary
+      if (node === range.endContainer) {
+        end = range.endOffset;
+      } else if (range.endContainer.nodeType === Node.ELEMENT_NODE && node.parentNode === range.endContainer) {
+        const index = Array.from(range.endContainer.childNodes).indexOf(node);
+        if (index > range.endOffset) return; // Skip
+        if (index === range.endOffset) return; // Range ends before this node starts
+      }
+
+      if (start >= end || start < 0) return;
+
+      try {
+        // Surgical splitting
+        const part = node.splitText(start);
+        part.splitText(end - start);
+        
+        const mark = document.createElement('mark');
+        mark.className = className;
+        mark.setAttribute('style', (style || '') + ' display: inline !important; visibility: visible !important; opacity: 1 !important;');
+        for (const [key, val] of Object.entries(attributes)) {
+          mark.setAttribute(key, val);
+        }
+        
+        if (part.parentNode) {
+          part.parentNode.replaceChild(mark, part);
+          mark.appendChild(part);
+          marks.push(mark);
+        }
+      } catch (e) {
+        console.warn('Node split failed:', e);
+      }
+    });
+    
+    return marks;
+  }
+
   function applyVisualHighlight(range, styleObj, id, note) {
     try {
-      const mark = document.createElement('mark');
-      mark.className = 'rw-highlight';
-      mark.setAttribute('style', styleObj.css);
-      if (id) mark.setAttribute('data-rw-id', id);
-      if (note) { mark.setAttribute('data-has-note', 'true'); mark.setAttribute('data-note-text', note); }
-      const contents = range.extractContents(); mark.appendChild(contents); range.insertNode(mark);
+      const attributes = {};
+      if (id) attributes['data-rw-id'] = id;
+      if (note) { 
+        attributes['data-has-note'] = 'true'; 
+        attributes['data-note-text'] = note; 
+      }
+      
+      wrapRangeWithMark(range, 'rw-highlight', attributes, styleObj.css);
       window.getSelection().removeAllRanges();
     } catch (e) { console.error('Highlight failed:', e); }
   }
 
   function applyReaderSaveHighlight(range, id, tags, notes) {
     try {
-      const mark = document.createElement('mark');
-      mark.className = 'rw-reader-save';
-      if (id) mark.setAttribute('data-reader-id', id);
-      if (tags) mark.setAttribute('data-tags', JSON.stringify(tags));
-      if (notes) mark.setAttribute('data-notes', notes);
-      const contents = range.extractContents(); mark.appendChild(contents); range.insertNode(mark);
+      const attributes = {};
+      if (id) attributes['data-reader-id'] = id;
+      if (tags) attributes['data-tags'] = JSON.stringify(tags);
+      if (notes) attributes['data-notes'] = notes;
+      
+      wrapRangeWithMark(range, 'rw-reader-save', attributes);
       window.getSelection().removeAllRanges();
     } catch (e) { console.error('Reader save failed:', e); }
   }
@@ -455,6 +551,16 @@
       case 'saving-success': showNotification('Saved to Reader!', 'success'); playSound('saved'); if (fab) fab.classList.remove('loading'); break;
       case 'deletion-success': showNotification('Document deleted from Reader', 'deletion'); playSound('select'); if (fab) fab.classList.remove('loading'); break;
       case 'saving-error': showNotification(`Error: ${request.error}`, 'error'); playSound('error'); if (fab) fab.classList.remove('loading'); break;
+      case 'context-menu-highlight':
+        if (activeSelection) {
+          handleHighlightAction('highlight', settings.annotationStyles[0]);
+        } else {
+          showNotification('Please select some text first', 'info');
+        }
+        break;
+      case 'context-menu-save-page':
+        handleSavePage();
+        break;
     }
   });
 

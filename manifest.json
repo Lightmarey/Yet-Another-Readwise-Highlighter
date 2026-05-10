@@ -1,14 +1,22 @@
 {
   "manifest_version": 3,
   "name": "Readwise Companion",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Highlighter and Reader clipper for Readwise.",
   "icons": {
     "16": "icon/toolbar-icon.png",
     "48": "icon/toolbar-icon.png",
     "128": "icon/toolbar-icon.png"
   },
-  "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus",
+    "scripting",
+    "tabs",
+    "alarms"
+  ],
+  "host_permissions": ["*://*/*", "https://readwise.io/*"],
   "background": {
     "service_worker": "js/worker.js",
     "scripts": ["js/worker.js"]

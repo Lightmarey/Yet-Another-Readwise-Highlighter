@@ -1,6 +1,7 @@
 const DEFAULT_SETTINGS = {
   readwiseToken: '',
   theme: 'auto',
+  enableAutoEnrichment: false,
   enableFAB: true,
   enableToolbar: true,
   checkPageStatus: true,
@@ -13,9 +14,9 @@ const DEFAULT_SETTINGS = {
   toolbarHorizontalOffset: 0,
   excludedUrls: '',
   annotationStyles: [
-    { id: 'h1', label: 'Yellow', icon: 'H', css: 'background-color: #ffd845;' },
-    { id: 'h2', label: 'Blue Dot', icon: 'B', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
-    { id: 'h3', label: 'Red Wavy', icon: 'R', css: 'text-decoration: underline wavy red; background: transparent;' },
+    { id: 'h1', label: 'Yellow', icon: '✨', css: 'background-color: #ffd845;' },
+    { id: 'h2', label: 'Blue Dot', icon: '🔹', css: 'border-bottom: 2px dotted #a3c8ff; background: transparent;' },
+    { id: 'h3', label: 'Red Wavy', icon: '〰️', css: 'text-decoration: underline wavy red; background: transparent;' },
     { id: 'h4', label: 'Bold Italic', icon: 'B/I', css: 'font-weight: bold; font-style: italic; background: transparent;' }
   ]
 };
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enableFAB: document.getElementById('enableFAB'),
     enableToolbar: document.getElementById('enableToolbar'),
     checkPageStatus: document.getElementById('checkPageStatus'),
+    enableAutoEnrichment: document.getElementById('enableAutoEnrichment'),
     quickSaveSelection: document.getElementById('quickSaveSelection'),
     beforeSaveAction: document.getElementById('beforeSaveAction'),
     afterSaveAction: document.getElementById('afterSaveAction'),
@@ -207,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       enableFAB: inputs.enableFAB.checked,
       enableToolbar: inputs.enableToolbar.checked,
       checkPageStatus: inputs.checkPageStatus.checked,
+      enableAutoEnrichment: inputs.enableAutoEnrichment.checked,
       quickSaveSelection: inputs.quickSaveSelection.checked,
       beforeSaveAction: inputs.beforeSaveAction.value,
       afterSaveAction: inputs.afterSaveAction.value,
@@ -268,4 +271,3 @@ document.addEventListener('DOMContentLoaded', () => {
     debounceSave();
   };
 });
-);

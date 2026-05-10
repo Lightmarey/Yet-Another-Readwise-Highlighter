@@ -149,7 +149,14 @@
   async function handleSavePage() {
     if (fab) fab.classList.add('loading');
     showNotification('Saving to Reader...', 'loading');
-    chrome.runtime.sendMessage({ action: 'save-page-request' }, (response) => {
+    
+    const url = cleanUrl(window.location.href);
+    const html = getCleanedHTML();
+
+    chrome.runtime.sendMessage({ 
+      action: 'save-page-request',
+      data: { url, html, title: document.title }
+    }, (response) => {
       if (fab) fab.classList.remove('loading');
       if (response && response.success) { showNotification('Saved to Reader!', 'success'); playSound('saved'); }
       else { showNotification(`Error: ${response ? response.error : 'Request failed'}`, 'error'); playSound('error'); }
@@ -536,6 +543,36 @@
       const highlight = path.find(el => el.classList && el.classList.contains('rw-highlight'));
       if (highlight) { showHighlightActions(highlight, highlight.getBoundingClientRect()); return; }
       const readerSave = path.find(el => el.classList && el.classList.contains('rw-reader-save'));
+      if (readerSave) { showReaderSaveActions(readerSave, readerSave.getBoundingClientRect()); return; }
+    });
+  }
+
+  function selectionExists() {
+    const selection = window.getSelection();
+    return selection && selection.toString().trim().length > 0;
+  }
+
+  chrome.runtime.onMessage.addListener((request) => {
+    switch (request.action) {
+      case 'saving-started': showNotification('Saving to Reader...', 'loading'); if (fab) fab.classList.add('loading'); break;
+      case 'saving-success': showNotification('Saved to Reader!', 'success'); playSound('saved'); if (fab) fab.classList.remove('loading'); break;
+      case 'deletion-success': showNotification('Document deleted from Reader', 'deletion'); playSound('select'); if (fab) fab.classList.remove('loading'); break;
+      case 'saving-error': showNotification(`Error: ${request.error}`, 'error'); playSound('error'); if (fab) fab.classList.remove('loading'); break;
+      case 'context-menu-highlight':
+        if (activeSelection) {
+          handleHighlightAction('highlight', settings.annotationStyles[0]);
+        } else {
+          showNotification('Please select some text first', 'info');
+        }
+        break;
+      case 'context-menu-save-page':
+        handleSavePage();
+        break;
+    }
+  });
+
+})();
+('rw-reader-save'));
       if (readerSave) { showReaderSaveActions(readerSave, readerSave.getBoundingClientRect()); return; }
     });
   }

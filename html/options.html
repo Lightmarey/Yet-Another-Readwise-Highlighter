@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Readwise Companion Settings</title>
+  <title data-i18n="settingsTitle">Readwise Companion Settings</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" type="text/css" href="../css/options.css">
 </head>
@@ -12,7 +12,7 @@
   <div class="container">
     <div class="header">
       <img src="../icon/toolbar-icon.png" width="32" height="32" alt="Logo">
-      <h1>Readwise Companion</h1>
+      <h1 data-i18n="extensionName">Readwise Companion</h1>
       <button id="themeToggle" class="icon-btn" title="Toggle Theme" style="margin-left: auto;">
         <i id="themeIcon" class="fa-solid fa-circle-half-stroke"></i>
       </button>
@@ -20,24 +20,24 @@
     </div>
 
     <section class="section">
-      <h2 class="section-title">Account</h2>
+      <h2 class="section-title" data-i18n="accountSection">Account</h2>
       <div class="field">
-        <label for="accessToken">Access Token</label>
+        <label for="accessToken" data-i18n="accessTokenLabel">Access Token</label>
         <div class="input-with-button">
-          <input type="password" id="accessToken" placeholder="Enter your Readwise token">
+          <input type="password" id="accessToken" data-i18n-placeholder="accessTokenPlaceholder">
         </div>
-        <p class="help">Get your token from <a href="https://readwise.io/access_token"
+        <p class="help" data-i18n="accessTokenHelp">Get your token from <a href="https://readwise.io/access_token"
             target="_blank">readwise.io/access_token</a></p>
       </div>
     </section>
 
     <section class="section">
-      <h2 class="section-title">Features</h2>
+      <h2 class="section-title" data-i18n="featuresSection">Features</h2>
       
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Floating Save Button</span>
-          <span class="toggle-desc">Show a quick-save icon on the edge of every webpage.</span>
+          <span class="toggle-label" data-i18n="enableFABLabel">Floating Save Button</span>
+          <span class="toggle-desc" data-i18n="enableFABDesc">Show a quick-save icon on the edge of every webpage.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="enableFAB">
@@ -47,8 +47,8 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Selection Toolbar</span>
-          <span class="toggle-desc">Show highlight and note tools when text is selected.</span>
+          <span class="toggle-label" data-i18n="enableToolbarLabel">Selection Toolbar</span>
+          <span class="toggle-desc" data-i18n="enableToolbarDesc">Show highlight and note tools when text is selected.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="enableToolbar">
@@ -58,8 +58,8 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Check Page Status</span>
-          <span class="toggle-desc">Show a indicator on the icon if the page is already in Reader.</span>
+          <span class="toggle-label" data-i18n="checkPageStatusLabel">Check Page Status</span>
+          <span class="toggle-desc" data-i18n="checkPageStatusDesc">Show a indicator on the icon if the page is already in Reader.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="checkPageStatus">
@@ -69,8 +69,8 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Auto-Enrich Thin Clips</span>
-          <span class="toggle-desc">Background task to fix mobile saves or paywalled stubs.</span>
+          <span class="toggle-label" data-i18n="autoEnrichLabel">Auto-Enrich Thin Clips</span>
+          <span class="toggle-desc" data-i18n="autoEnrichDesc">Background task to fix mobile saves or paywalled stubs.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="enableAutoEnrichment">
@@ -80,8 +80,8 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Quick Save Selection</span>
-          <span class="toggle-desc">Skip tag/note popup for Reader selection saves.</span>
+          <span class="toggle-label" data-i18n="quickSaveSelectionLabel">Quick Save Selection</span>
+          <span class="toggle-desc" data-i18n="quickSaveSelectionDesc">Skip tag/note popup for Reader selection saves.</span>
         </div>
         <label class="switch">
           <input type="checkbox" id="quickSaveSelection">
@@ -91,32 +91,32 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Action Before Save</span>
-          <span class="toggle-desc">When page is not in Reader.</span>
+          <span class="toggle-label" data-i18n="beforeSaveActionLabel">Action Before Save</span>
+          <span class="toggle-desc" data-i18n="beforeSaveActionDesc">When page is not in Reader.</span>
         </div>
         <select id="beforeSaveAction" class="select-input right-input">
-          <option value="save">Save to Reader</option>
-          <option value="open_reader">Open Reader Dashboard</option>
-          <option value="none">Nothing</option>
+          <option value="save" data-i18n="optSave">Save to Reader</option>
+          <option value="open_reader" data-i18n="optOpenDashboard">Open Reader Dashboard</option>
+          <option value="none" data-i18n="optNothing">Nothing</option>
         </select>
       </div>
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Action After Save</span>
-          <span class="toggle-desc">When page is already in Reader.</span>
+          <span class="toggle-label" data-i18n="afterSaveActionLabel">Action After Save</span>
+          <span class="toggle-desc" data-i18n="afterSaveActionDesc">When page is already in Reader.</span>
         </div>
         <select id="afterSaveAction" class="select-input right-input">
-          <option value="open_saved">Open in Reader</option>
-          <option value="delete">Delete in Reader</option>
-          <option value="none">Nothing</option>
+          <option value="open_saved" data-i18n="optOpenInReader">Open in Reader</option>
+          <option value="delete" data-i18n="optDelete">Delete in Reader</option>
+          <option value="none" data-i18n="optNothing">Nothing</option>
         </select>
       </div>
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Default Save Location</span>
-          <span class="toggle-desc">Triage destination for new documents.</span>
+          <span class="toggle-label" data-i18n="defaultLocationLabel">Default Save Location</span>
+          <span class="toggle-desc" data-i18n="defaultLocationDesc">Triage destination for new documents.</span>
         </div>
         <select id="defaultLocation" class="select-input right-input">
           <option value="new">New</option>
@@ -128,42 +128,41 @@
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Max Styles in Menu</span>
-          <span class="toggle-desc">Quick-access buttons to show.</span>
+          <span class="toggle-label" data-i18n="maxStylesLabel">Max Styles in Menu</span>
+          <span class="toggle-desc" data-i18n="maxStylesDesc">Quick-access buttons to show.</span>
         </div>
-        <input type="number" id="maxStylesToDisplay" class="select-input right-input" min="1" max="10" placeholder="4">
+        <input type="number" id="maxStylesToDisplay" class="select-input right-input" min="1" max="10">
       </div>
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Toolbar Vertical Position</span>
-          <span class="toggle-desc">Relative to selection.</span>
+          <span class="toggle-label" data-i18n="toolbarPositionLabel">Toolbar Vertical Position</span>
+          <span class="toggle-desc" data-i18n="toolbarPositionDesc">Relative to selection.</span>
         </div>
         <select id="toolbarVerticalPosition" class="select-input right-input">
-          <option value="above">Above</option>
-          <option value="below">Below</option>
+          <option value="above" data-i18n="optAbove">Above</option>
+          <option value="below" data-i18n="optBelow">Below</option>
         </select>
       </div>
 
       <div class="toggle-field">
         <div class="toggle-info">
-          <span class="toggle-label">Toolbar Horizontal Offset</span>
-          <span class="toggle-desc">Shift left (-) or right (+).</span>
+          <span class="toggle-label" data-i18n="toolbarOffsetLabel">Toolbar Horizontal Offset</span>
+          <span class="toggle-desc" data-i18n="toolbarOffsetDesc">Shift left (-) or right (+).</span>
         </div>
-        <input type="number" id="toolbarHorizontalOffset" class="select-input right-input" placeholder="0">
+        <input type="number" id="toolbarHorizontalOffset" class="select-input right-input">
       </div>
 
       <div class="field" style="margin-top: 2rem;">
-        <label for="excludedUrls">Excluded URLs (One per line, allows wildcard *)</label>
-        <textarea id="excludedUrls" class="select-input" rows="4" placeholder="e.g. *.google.com/*
-internal.app/*"></textarea>
+        <label for="excludedUrls" data-i18n="excludedUrlsLabel">Excluded URLs (One per line, allows wildcard *)</label>
+        <textarea id="excludedUrls" class="select-input" rows="4" data-i18n-placeholder="excludedUrlsPlaceholder"></textarea>
       </div>
     </section>
 
     <section class="section">
       <div class="section-header">
-        <h2 class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Annotation Styles</h2>
-        <button id="toggleAddStyle" class="icon-btn primary-text-btn" title="Add Custom Style">
+        <h2 class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;" data-i18n="stylesSection">Annotation Styles</h2>
+        <button id="toggleAddStyle" class="icon-btn primary-text-btn" data-i18n-title="addStyleBtnTitle">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
       </div>
@@ -172,24 +171,24 @@ internal.app/*"></textarea>
       </div>
       
       <div id="addStyleContainer" class="add-style-card" style="display: none;">
-        <h3 class="field-label">Add Custom Style</h3>
+        <h3 class="field-label" data-i18n="addStyleTitle">Add Custom Style</h3>
         <div class="field-row">
-          <input type="text" id="newStyleLabel" placeholder="Label (e.g. Wavy Red)" class="select-input">
-          <input type="text" id="newStyleIcon" placeholder="Icon (e.g. 🖍️)" class="select-input" style="width: 80px;">
+          <input type="text" id="newStyleLabel" data-i18n-placeholder="styleLabelPlaceholder" class="select-input">
+          <input type="text" id="newStyleIcon" data-i18n-placeholder="styleIconPlaceholder" class="select-input" style="width: 80px;">
         </div>
-        <textarea id="newStyleCSS" placeholder="CSS (e.g. border-bottom: 2px wavy red;)" class="select-input" rows="2"></textarea>
+        <textarea id="newStyleCSS" data-i18n-placeholder="styleCSSPlaceholder" class="select-input" rows="2"></textarea>
         <div class="field-row">
-          <button id="addStyle" class="primary-btn" style="padding: 8px 16px; font-size: 13px;">Add Style</button>
-          <button id="cancelAddStyle" class="secondary-btn" style="margin-top: 0;">Cancel</button>
+          <button id="addStyle" class="primary-btn" style="padding: 8px 16px; font-size: 13px;" data-i18n="btnAddStyle">Add Style</button>
+          <button id="cancelAddStyle" class="secondary-btn" style="margin-top: 0;" data-i18n="btnCancel">Cancel</button>
         </div>
       </div>
     </section>
 
-    <section class="section" style="border-top: 1px solid #f2f3f5; padding-top: 2rem;">
-      <h2 class="section-title">About</h2>
+    <section class="section" style="border-top: 1px solid var(--border-color); padding-top: 2rem;">
+      <h2 class="section-title" data-i18n="aboutSection">About</h2>
       <div class="about-info">
-        <p>Yet Another Readwise Highlighter <span id="version"></span></p>
-        <p class="about-desc">A browser extension for capturing knowledge and content seamlessly to Readwise and Reader
+        <p>Readwise Companion <span id="version"></span></p>
+        <p class="about-desc" data-i18n="aboutDesc">A browser extension for capturing knowledge and content seamlessly to Readwise and Reader
           without disturbing the flow.</p>
       </div>
     </section>
@@ -198,6 +197,8 @@ internal.app/*"></textarea>
       &copy; 2026 Lightmarey.
     </div>
   </div>
+  <script src="../js/shared/constants.js"></script>
+  <script src="../js/shared/utils.js"></script>
   <script src="../js/options.js"></script>
 </body>
 

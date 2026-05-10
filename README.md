@@ -4,6 +4,4 @@ A third-party Readwise browser extension that enables direct highlighting and an
 
 The browser icon's behavior has been modified to mirror "read-it-later" services like Instapaper; clicking the icon now saves the page directly to Readwise Reader.
 
-This plugin currently only supports Firefox.
-
 This extension was inspired by Cubox.

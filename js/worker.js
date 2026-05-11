@@ -54,49 +54,50 @@ function updatePageIndicator(tabId, isSaved) {
 
 // --- Logic Orchestration ---
 
-async function handleSaveSequence(url, title, tabId, html = null) {
+async function performSave(payload, tabId = null) {
   const settings = await getSettings();
   const client = new ReadwiseClient(settings.readwiseToken);
-  const cleaned = cleanUrl(url);
-
+  
   try {
-    let result = await client.saveDocument({
-      url: cleaned,
-      title: title,
-      html: html,
-      location: settings.defaultLocation,
-      saved_using: 'YARH Companion Extension',
-      should_clean_html: !!html
-    });
+    let result = await client.saveDocument(payload);
 
     // Robust Replacement Logic (Delete-then-Create)
-    if (result.status === 200 && html) {
+    if (result.status === 200 && payload.html) {
       await client.deleteDocument(result.id);
       await new Promise(r => setTimeout(r, 1500));
-      result = await client.saveDocument({
-        url: cleaned,
-        title: title,
-        html: html,
-        location: settings.defaultLocation,
-        saved_using: 'YARH Companion Extension (Update)',
-        should_clean_html: true
-      });
+      if (payload.saved_using) payload.saved_using += ' (Update)';
+      result = await client.saveDocument(payload);
     }
 
     if (result.success) {
-      await setCachedStatus(cleaned, { isSaved: true, readerUrl: result.url, docId: result.id });
+      await setCachedStatus(payload.url, { isSaved: true, readerUrl: result.url, docId: result.id });
       if (tabId) updatePageIndicator(tabId, true);
       return { success: true, readerUrl: result.url, id: result.id };
     }
-    return { success: false, error: result.data?.detail || 'Save failed' };
+    return { success: false, error: result.error || 'Save failed' };
   } catch (e) {
     return { success: false, error: e.message };
   }
 }
 
+async function handleSaveSequence(url, title, tabId, html = null) {
+  const settings = await getSettings();
+  const cleaned = cleanUrl(url);
+  const payload = {
+    url: cleaned,
+    title: title,
+    location: settings.defaultLocation,
+    saved_using: 'YARH Companion Extension'
+  };
+  if (html) {
+    payload.html = html;
+    payload.should_clean_html = true;
+  }
+  return await performSave(payload, tabId);
+}
+
 async function saveReaderHtml(data) {
   const settings = await getSettings();
-  const client = new ReadwiseClient(settings.readwiseToken);
   const cleanedUrl = cleanUrl(data.url);
 
   const payload = {
@@ -110,23 +111,7 @@ async function saveReaderHtml(data) {
   if (data.tags && data.tags.length > 0) payload.tags = data.tags;
   if (data.notes && data.notes.trim().length > 0) payload.notes = data.notes.trim();
 
-  try {
-    let result = await client.saveDocument(payload);
-
-    if (result.status === 200) {
-      await client.deleteDocument(result.id);
-      await new Promise(r => setTimeout(r, 1500));
-      result = await client.saveDocument(payload);
-    }
-
-    if (result.success) {
-      await setCachedStatus(cleanedUrl, { isSaved: true, readerUrl: result.url, docId: result.id });
-      return { success: true, id: result.id };
-    }
-    return { success: false, error: result.data?.detail || 'Save failed' };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return await performSave(payload);
 }
 
 async function checkPageInReader(url) {
@@ -209,8 +194,12 @@ api.action.onClicked.addListener(async (tab) => {
 });
 
 api.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'save-page-request' || request.action === 'save-reader-html') {
+  if (request.action === 'save-page-request') {
     handleSaveSequence(request.data.url, request.data.title, sender.tab.id, request.data.html).then(sendResponse);
+    return true;
+  }
+  if (request.action === 'save-reader-html') {
+    saveReaderHtml(request.data).then(sendResponse);
     return true;
   }
   if (request.action === 'save-highlight') {

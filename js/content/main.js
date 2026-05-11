@@ -361,7 +361,12 @@
 
   function addListeners() {
     const UI = getUI();
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', (e) => {
+      const UI = getUI();
+      const root = UI.getShadowRoot();
+      if (e.composedPath().includes(root.host)) return;
+      if (isUrlExcluded()) return;
+
       setTimeout(() => {
         const selection = window.getSelection();
         const text = selection.toString().trim();

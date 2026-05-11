@@ -25,10 +25,10 @@
       });
 
       const data = await response.json().catch(() => ({}));
+      if (!response.ok) return { success: false, status: response.status, error: data.detail || response.statusText };
       return { 
         status: response.status, 
-        ok: response.ok, 
-        success: response.ok,
+        success: true,
         id: data.id,
         url: data.url,
         data 
@@ -46,7 +46,8 @@
         body: JSON.stringify(data)
       });
       const resData = await response.json().catch(() => ({}));
-      return { success: response.ok, data: resData };
+      if (!response.ok) return { success: false, error: resData.detail || response.statusText };
+      return { success: true, data: resData };
     }
 
     async deleteDocument(id) {
@@ -64,7 +65,9 @@
       const response = await fetch(`${this.baseUrl}/v3/list/?${query}`, {
         headers: { 'Authorization': `Token ${this.token}` }
       });
-      return await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || response.statusText);
+      return data;
     }
 
     async saveHighlight(highlight) {

@@ -21,10 +21,16 @@
 
       const { enrichmentCooldown } = await root.YARH.Utils.api.storage.local.get('enrichmentCooldown');
       const cooldowns = enrichmentCooldown || {};
+      const now = Date.now();
+
+      // Cleanup stale cooldowns (older than 48 hours)
+      for (const [key, ts] of Object.entries(cooldowns)) {
+        if (now - ts > 48 * 60 * 60 * 1000) delete cooldowns[key];
+      }
 
       for (const doc of docs) {
         const cleanedSource = root.YARH.Utils.cleanUrl(doc.source_url);
-        if (!cleanedSource || (cooldowns[cleanedSource] && Date.now() - cooldowns[cleanedSource] < 86400000)) continue;
+        if (!cleanedSource || (cooldowns[cleanedSource] && now - cooldowns[cleanedSource] < 86400000)) continue;
 
         const isThin = doc.word_count < 300 || PAYWALL_REGEX.test(doc.html_content || '');
         if (isThin) {
@@ -33,20 +39,30 @@
             if (fetchRes.ok) {
               const html = await fetchRes.text();
               if (html.length > 30000 && !PAYWALL_REGEX.test(html)) { 
-                await client.deleteDocument(doc.id);
-                await new Promise(r => setTimeout(r, 1500));
-                await client.saveDocument({
-                  url: cleanedSource,
-                  title: doc.title,
-                  html: html,
-                  should_clean_html: true,
-                  saved_using: 'YARH Background Enrichment'
-                });
+                const delRes = await client.deleteDocument(doc.id);
+                if (delRes) {
+                  await new Promise(r => setTimeout(r, 1500));
+                  
+                  const payload = {
+                    url: cleanedSource,
+                    title: doc.title,
+                    html: html,
+                    should_clean_html: true,
+                    location: doc.location || 'new',
+                    saved_using: 'YARH Background Enrichment'
+                  };
+                  if (doc.notes) payload.notes = doc.notes;
+                  if (doc.tags && Object.keys(doc.tags).length > 0) {
+                    payload.tags = Object.keys(doc.tags);
+                  }
+                  
+                  await client.saveDocument(payload);
+                }
               }
             }
           } catch (e) {}
         }
-        cooldowns[cleanedSource] = Date.now();
+        cooldowns[cleanedSource] = now;
       }
       await root.YARH.Utils.api.storage.local.set({ enrichmentCooldown: cooldowns });
     } catch (e) {

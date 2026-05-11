@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Readwise Companion",
-  "version": "1.3.3",
-  "description": "Highlighter and Reader clipper for Readwise.",
+  "name": "__MSG_extensionName__",
+  "version": "1.4.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
   "icons": {
     "16": "icon/toolbar-icon.png",
     "48": "icon/toolbar-icon.png",
@@ -16,15 +17,24 @@
     "tabs",
     "alarms"
   ],
-  "host_permissions": ["*://*/*", "https://readwise.io/*"],
+  "host_permissions": [
+    "*://*/*",
+    "https://readwise.io/*"
+  ],
   "background": {
     "service_worker": "js/worker.js",
-    "scripts": ["js/worker.js"]
+    "scripts": [
+      "js/shared/constants.js",
+      "js/shared/utils.js",
+      "js/background/api.js",
+      "js/background/enrichment.js",
+      "js/worker.js"
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "{d5a1b3c7-e2f4-4a5d-b8d9-0c1e2f3a4b5c}",
-      "strict_min_version": "140.0",
+      "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": ["none"],
         "optional": []
@@ -46,15 +56,34 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["js/content.js"],
-      "css": ["css/content.css", "css/globalHighlightStyles.css"]
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "js/shared/constants.js",
+        "js/shared/utils.js",
+        "js/content/highlighter.js",
+        "js/content/ui.js",
+        "js/content/main.js"
+      ],
+      "css": [
+        "css/content.css",
+        "css/globalHighlightStyles.css"
+      ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["audio/*.m4a", "css/*.css", "icon/*.png"],
-      "matches": ["http://*/*", "https://*/*"]
+      "resources": [
+        "audio/*.m4a",
+        "css/*.css",
+        "icon/*.png"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
     }
   ]
 }

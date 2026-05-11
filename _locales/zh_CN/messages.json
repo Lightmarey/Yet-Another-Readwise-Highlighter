@@ -5,7 +5,7 @@
   "accountSection": { "message": "账户" },
   "accessTokenLabel": { "message": "访问令牌 (Access Token)" },
   "accessTokenPlaceholder": { "message": "输入您的 Readwise 令牌" },
-  "accessTokenHelp": { "message": "从 $LINK$ 获取您的令牌" },
+  "accessTokenHelp": { "message": "从 $LINK$ 获取您的令牌", "placeholders": { "link": { "content": "$1" } } },
   "featuresSection": { "message": "功能" },
   "enableFABLabel": { "message": "悬浮保存按钮" },
   "enableFABDesc": { "message": "在每个网页边缘显示快速保存图标。" },

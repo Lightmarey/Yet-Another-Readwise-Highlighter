@@ -31,7 +31,7 @@
 
   async function init() {
     // FIX: Pass the settings template to ensure defaults are hydrated correctly
-    chrome.storage.sync.get(settings, (data) => {
+    getUtils().api.storage.sync.get(settings, (data) => {
       Object.assign(settings, data);
       if (isUrlExcluded()) return;
       updateUI();
@@ -54,7 +54,7 @@
     });
   }
 
-  chrome.storage.onChanged.addListener((changes) => {
+  getUtils().api.storage.onChanged.addListener((changes) => {
     for (let [key, { newValue }] of Object.entries(changes)) { 
       if (newValue !== undefined) settings[key] = newValue; 
     }
@@ -88,10 +88,10 @@
     const root = UI.getShadowRoot();
     fab = document.createElement('div');
     fab.className = 'rw-fab';
-    fab.title = chrome.i18n.getMessage('saveToReader');
+    fab.title = getUtils().api.i18n.getMessage('saveToReader');
     
     const img = document.createElement('img');
-    img.src = chrome.runtime.getURL('icon/toolbar-icon.png');
+    img.src = getUtils().api.runtime.getURL('icon/toolbar-icon.png');
     fab.appendChild(img);
 
     let isDragging = false; let startX, startY, initialX, initialY;
@@ -158,14 +158,14 @@
     divider.className = 'rw-divider';
     toolbar.appendChild(divider);
 
-    const noteBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', chrome.i18n.getMessage('btnAddNote'));
+    const noteBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', getUtils().api.i18n.getMessage('btnAddNote'));
     noteBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
       handleHighlightAction('note', allStyles[0]);
     });
     toolbar.appendChild(noteBtn);
 
-    const readerBtn = createToolbarBtn('M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z', chrome.i18n.getMessage('btnSaveSelection'));
+    const readerBtn = createToolbarBtn('M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z', getUtils().api.i18n.getMessage('btnSaveSelection'));
     readerBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
       handleHighlightAction('reader');
@@ -190,16 +190,16 @@
     const UI = getUI();
     const Utils = getUtils();
     if (fab) fab.classList.add('loading');
-    UI.showNotification(chrome.i18n.getMessage('statusSaving'), 'loading');
+    UI.showNotification(getUtils().api.i18n.getMessage('statusSaving'), 'loading');
     
     const html = getFullCleanedHTML();
-    chrome.runtime.sendMessage({ 
+    getUtils().api.runtime.sendMessage({ 
       action: 'save-page-request',
       data: { url: Utils.cleanUrl(window.location.href), html, title: document.title }
     }, (response) => {
       if (fab) fab.classList.remove('loading');
-      if (response && response.success) { UI.showNotification(chrome.i18n.getMessage('statusSaved'), 'success'); UI.playSound('saved'); }
-      else { UI.showNotification(`${chrome.i18n.getMessage('statusError')}: ${response ? response.error : ''}`, 'error'); UI.playSound('error'); }
+      if (response && response.success) { UI.showNotification(getUtils().api.i18n.getMessage('statusSaved'), 'success'); UI.playSound('saved'); }
+      else { UI.showNotification(`${getUtils().api.i18n.getMessage('statusError')}: ${response ? response.error : ''}`, 'error'); UI.playSound('error'); }
     });
   }
 
@@ -289,21 +289,30 @@
     const UI = getUI();
     const Utils = getUtils();
     const Highlighter = getHighlighter();
-    UI.showNotification(chrome.i18n.getMessage('statusSaving'), 'loading');
+    UI.showNotification(getUtils().api.i18n.getMessage('statusSaving'), 'loading');
     UI.playSound('select');
-    chrome.runtime.sendMessage({
+    getUtils().api.runtime.sendMessage({
       action: 'save-highlight',
       data: { text, note, title: document.title, url: Utils.cleanUrl(window.location.href) }
     }, (response) => {
       if (response && response.success) {
-        UI.showNotification(chrome.i18n.getMessage('statusHighlightSaved'), 'success'); UI.playSound('saved');
-        if (!existingMark) Highlighter.wrapRangeWithMark(range, 'rw-highlight', { 'data-rw-id': response.id, 'data-has-note': !!note, 'data-note-text': note }, styleObj.css);
+        UI.showNotification(getUtils().api.i18n.getMessage('statusHighlightSaved'), 'success'); UI.playSound('saved');
+        if (!existingMark) {
+          const attrs = { 'data-rw-id': response.id };
+          if (note) { attrs['data-has-note'] = 'true'; attrs['data-note-text'] = note; }
+          Highlighter.wrapRangeWithMark(range, 'rw-highlight', attrs, styleObj.css);
+        }
         else {
-          existingMark.setAttribute('data-has-note', !!note);
-          existingMark.setAttribute('data-note-text', note);
+          if (note) {
+            existingMark.setAttribute('data-has-note', 'true');
+            existingMark.setAttribute('data-note-text', note);
+          } else {
+            existingMark.removeAttribute('data-has-note');
+            existingMark.removeAttribute('data-note-text');
+          }
         }
         activeSelection = null;
-      } else { UI.showNotification(chrome.i18n.getMessage('statusError'), 'error'); UI.playSound('error'); }
+      } else { UI.showNotification(getUtils().api.i18n.getMessage('statusError'), 'error'); UI.playSound('error'); }
     });
   }
 
@@ -311,17 +320,17 @@
     const UI = getUI();
     const Utils = getUtils();
     const Highlighter = getHighlighter();
-    UI.showNotification(chrome.i18n.getMessage('statusSaving'), 'loading');
+    UI.showNotification(getUtils().api.i18n.getMessage('statusSaving'), 'loading');
     UI.playSound('select');
-    chrome.runtime.sendMessage({
+    getUtils().api.runtime.sendMessage({
       action: 'save-reader-html',
       data: { url: Utils.cleanUrl(window.location.href), html, title: document.title, tags, notes, location }
     }, (response) => {
       if (response && response.success) {
-        UI.showNotification(chrome.i18n.getMessage('statusSaved'), 'success'); UI.playSound('saved');
+        UI.showNotification(getUtils().api.i18n.getMessage('statusSaved'), 'success'); UI.playSound('saved');
         if (shouldMark) Highlighter.wrapRangeWithMark(range, 'rw-reader-save', { 'data-reader-id': response.id, 'data-tags': JSON.stringify(tags), 'data-notes': notes });
         activeSelection = null;
-      } else { UI.showNotification(chrome.i18n.getMessage('statusError'), 'error'); UI.playSound('error'); }
+      } else { UI.showNotification(getUtils().api.i18n.getMessage('statusError'), 'error'); UI.playSound('error'); }
     });
   }
 
@@ -374,16 +383,16 @@
       if (readerSave) { showReaderContext(readerSave, readerSave.getBoundingClientRect()); return; }
     });
 
-    chrome.runtime.onMessage.addListener((request) => {
+    getUtils().api.runtime.onMessage.addListener((request) => {
       if (request.action === 'context-menu-highlight') {
         if (activeSelection) handleHighlightAction('highlight', settings.annotationStyles[0]);
-        else UI.showNotification(chrome.i18n.getMessage('statusSelectText'), 'info');
+        else UI.showNotification(getUtils().api.i18n.getMessage('statusSelectText'), 'info');
       }
       if (request.action === 'context-menu-save-page') handleSavePage();
       
       const statusMap = { 'saving-started': 'statusSaving', 'saving-success': 'statusSaved', 'deletion-success': 'statusDeleted', 'saving-error': 'statusError' };
       if (statusMap[request.action]) {
-        UI.showNotification(chrome.i18n.getMessage(statusMap[request.action]), request.action.includes('success') ? 'success' : 'info');
+        UI.showNotification(getUtils().api.i18n.getMessage(statusMap[request.action]), request.action.includes('success') ? 'success' : 'info');
         if (request.action === 'saving-started' && fab) fab.classList.add('loading');
         if (request.action === 'saving-success' && fab) fab.classList.remove('loading');
         if (request.action === 'saving-success') UI.playSound('saved');
@@ -413,17 +422,17 @@
   function showHighlightContext(mark, rect) {
     const UI = getUI(); const root = UI.getShadowRoot();
     const menu = document.createElement('div'); menu.className = 'rw-toolbar';
-    const noteBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', chrome.i18n.getMessage('btnEditNote'));
+    const noteBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', getUtils().api.i18n.getMessage('btnEditNote'));
     noteBtn.onclick = () => {
       menu.remove(); const existingNote = mark.getAttribute('data-note-text') || '';
       showNoteUI(rect, { mode: 'note', existingNote }, (data) => executeSaveHighlight(mark.textContent, null, {}, data.note, mark));
     };
-    const deleteBtn = createToolbarBtn('M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', chrome.i18n.getMessage('btnDeleteHighlight'));
+    const deleteBtn = createToolbarBtn('M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', getUtils().api.i18n.getMessage('btnDeleteHighlight'));
     deleteBtn.onclick = () => {
       const id = mark.getAttribute('data-rw-id');
-      if (id) chrome.runtime.sendMessage({ action: 'delete-highlight', id });
+      if (id) getUtils().api.runtime.sendMessage({ action: 'delete-highlight', id });
       const parent = mark.parentNode; while (mark.firstChild) parent.insertBefore(mark.firstChild, mark); mark.remove(); menu.remove();
-      UI.showNotification(chrome.i18n.getMessage('statusRemoved'), 'info');
+      UI.showNotification(getUtils().api.i18n.getMessage('statusRemoved'), 'info');
     };
     menu.appendChild(noteBtn); menu.appendChild(deleteBtn); positionToolbar(menu, rect); root.appendChild(menu);
     const dismisser = (e) => { if (!e.composedPath().includes(menu)) { menu.remove(); document.removeEventListener('mousedown', dismisser); } };
@@ -433,22 +442,26 @@
   function showReaderContext(mark, rect) {
     const UI = getUI(); const root = UI.getShadowRoot();
     const menu = document.createElement('div'); menu.className = 'rw-toolbar';
-    const editBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', chrome.i18n.getMessage('btnEditClip'));
+    const editBtn = createToolbarBtn('M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z', getUtils().api.i18n.getMessage('btnEditClip'));
     editBtn.onclick = () => {
       menu.remove(); const notes = mark.getAttribute('data-notes') || ''; const tags = JSON.parse(mark.getAttribute('data-tags') || '[]');
       showNoteUI(rect, { mode: 'reader', existingNote: notes, existingTags: tags }, (data) => {
         const id = mark.getAttribute('data-reader-id');
-        chrome.runtime.sendMessage({ action: 'update-reader-document', id, data: { notes: data.note, tags: data.tags, location: data.location } }, (res) => {
-          if (res.success) { mark.setAttribute('data-notes', data.note); mark.setAttribute('data-tags', JSON.stringify(data.tags)); UI.showNotification(chrome.i18n.getMessage('statusClipUpdated'), 'success'); }
+        getUtils().api.runtime.sendMessage({ action: 'update-reader-document', id, data: { notes: data.note, tags: data.tags, location: data.location } }, (res) => {
+          if (res.success) { 
+            if (data.note) mark.setAttribute('data-notes', data.note); else mark.removeAttribute('data-notes');
+            if (data.tags && data.tags.length > 0) mark.setAttribute('data-tags', JSON.stringify(data.tags)); else mark.removeAttribute('data-tags');
+            UI.showNotification(getUtils().api.i18n.getMessage('statusClipUpdated'), 'success'); 
+          }
         });
       });
     };
-    const deleteBtn = createToolbarBtn('M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', chrome.i18n.getMessage('btnDeleteClip'));
+    const deleteBtn = createToolbarBtn('M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', getUtils().api.i18n.getMessage('btnDeleteClip'));
     deleteBtn.onclick = () => {
       const id = mark.getAttribute('data-reader-id');
-      if (id) chrome.runtime.sendMessage({ action: 'delete-reader-document', id });
+      if (id) getUtils().api.runtime.sendMessage({ action: 'delete-reader-document', id });
       const parent = mark.parentNode; while (mark.firstChild) parent.insertBefore(mark.firstChild, mark); mark.remove(); menu.remove();
-      UI.showNotification(chrome.i18n.getMessage('statusDeleted'), 'deletion');
+      UI.showNotification(getUtils().api.i18n.getMessage('statusDeleted'), 'deletion');
     };
     menu.appendChild(editBtn); menu.appendChild(deleteBtn); positionToolbar(menu, rect); root.appendChild(menu);
     const dismisser = (e) => { if (!e.composedPath().includes(menu)) { menu.remove(); document.removeEventListener('mousedown', dismisser); } };

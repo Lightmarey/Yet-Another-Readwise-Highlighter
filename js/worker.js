@@ -2,12 +2,14 @@
  * YARH Service Worker (Namespace Entry Point)
  */
 
-importScripts(
-  'shared/constants.js',
-  'shared/utils.js',
-  'background/api.js',
-  'background/enrichment.js'
-);
+if (typeof importScripts !== 'undefined') {
+  importScripts(
+    'shared/constants.js',
+    'shared/utils.js',
+    'background/api.js',
+    'background/enrichment.js'
+  );
+}
 
 const { DEFAULT_SETTINGS } = self.YARH.Constants;
 const { api, cleanUrl } = self.YARH.Utils;
@@ -92,6 +94,41 @@ async function handleSaveSequence(url, title, tabId, html = null) {
   }
 }
 
+async function saveReaderHtml(data) {
+  const settings = await getSettings();
+  const client = new ReadwiseClient(settings.readwiseToken);
+  const cleanedUrl = cleanUrl(data.url);
+
+  const payload = {
+    url: cleanedUrl,
+    html: data.html,
+    title: data.title,
+    location: data.location || settings.defaultLocation,
+    saved_using: 'YARH Companion Extension (Selection)',
+    should_clean_html: true
+  };
+  if (data.tags && data.tags.length > 0) payload.tags = data.tags;
+  if (data.notes && data.notes.trim().length > 0) payload.notes = data.notes.trim();
+
+  try {
+    let result = await client.saveDocument(payload);
+
+    if (result.status === 200) {
+      await client.deleteDocument(result.id);
+      await new Promise(r => setTimeout(r, 1500));
+      result = await client.saveDocument(payload);
+    }
+
+    if (result.success) {
+      await setCachedStatus(cleanedUrl, { isSaved: true, readerUrl: result.url, docId: result.id });
+      return { success: true, id: result.id };
+    }
+    return { success: false, error: result.data?.detail || 'Save failed' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
 async function checkPageInReader(url) {
   const cleaned = cleanUrl(url);
   const cached = await getCachedStatus(cleaned);
@@ -141,7 +178,8 @@ api.alarms.onAlarm.addListener(async (alarm) => {
 
 api.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'open-settings') api.runtime.openOptionsPage();
-  else api.tabs.sendMessage(tab.id, { action: `context-menu-${info.menuItemId.split('-').slice(1).join('-')}` });
+  else if (info.menuItemId === 'save-page-to-reader') api.tabs.sendMessage(tab.id, { action: 'context-menu-save-page' });
+  else if (info.menuItemId === 'highlight-selection') api.tabs.sendMessage(tab.id, { action: 'context-menu-highlight' });
 });
 
 api.action.onClicked.addListener(async (tab) => {
@@ -178,7 +216,16 @@ api.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'save-highlight') {
     getSettings().then(s => {
       const client = new ReadwiseClient(s.readwiseToken);
-      client.saveHighlight(request.data).then(res => sendResponse(res));
+      const highlightObj = {
+        text: request.data.text,
+        title: request.data.title,
+        source_url: request.data.url,
+        category: 'articles'
+      };
+      if (request.data.note && request.data.note.trim().length > 0) {
+        highlightObj.note = request.data.note.trim();
+      }
+      client.saveHighlight(highlightObj).then(res => sendResponse(res));
     });
     return true;
   }

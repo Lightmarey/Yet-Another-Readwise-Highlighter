@@ -69,7 +69,7 @@
 
     async saveHighlight(highlight) {
       if (!this.token) throw new Error('Token missing');
-      highlight.source_url = root.YARH.Utils.cleanUrl(highlight.source_url);
+      if (highlight.source_url) highlight.source_url = root.YARH.Utils.cleanUrl(highlight.source_url);
       const response = await fetch(`${this.baseUrl}/v2/highlights/`, {
         method: 'POST',
         headers: {
@@ -79,7 +79,8 @@
         body: JSON.stringify({ highlights: [highlight] })
       });
       const data = await response.json().catch(() => ({}));
-      return { success: response.ok, id: data[0]?.modified_highlights?.[0], data };
+      if (!response.ok) return { success: false, error: data.detail || response.statusText };
+      return { success: true, id: data[0]?.modified_highlights?.[0], data };
     }
 
     async deleteHighlight(id) {

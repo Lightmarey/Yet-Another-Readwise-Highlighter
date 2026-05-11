@@ -19,7 +19,7 @@
       const docs = data.results || [];
       const PAYWALL_REGEX = /subscribe to continue|start your free trial|create a free account|already a subscriber|regwall|premium content|subscriber exclusive/i;
 
-      const { enrichmentCooldown } = await chrome.storage.local.get('enrichmentCooldown');
+      const { enrichmentCooldown } = await root.YARH.Utils.api.storage.local.get('enrichmentCooldown');
       const cooldowns = enrichmentCooldown || {};
 
       for (const doc of docs) {
@@ -48,7 +48,7 @@
         }
         cooldowns[cleanedSource] = Date.now();
       }
-      await chrome.storage.local.set({ enrichmentCooldown: cooldowns });
+      await root.YARH.Utils.api.storage.local.set({ enrichmentCooldown: cooldowns });
     } catch (e) {
       console.error('[YARH] Enrichment Error:', e);
     }

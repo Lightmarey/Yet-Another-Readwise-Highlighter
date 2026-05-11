@@ -114,7 +114,13 @@
       Object.keys(inputs).forEach(key => {
         const el = inputs[key];
         if (!el) return;
-        settings[key] = el.type === 'checkbox' ? el.checked : el.value;
+        if (el.type === 'checkbox') {
+          settings[key] = el.checked;
+        } else if (el.type === 'text' || el.type === 'password' || el.tagName === 'TEXTAREA') {
+          settings[key] = el.value.trim();
+        } else {
+          settings[key] = el.value;
+        }
       });
 
       api.storage.sync.set(settings, () => {

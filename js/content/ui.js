@@ -19,7 +19,7 @@ window.YARH.UI = {
     
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = chrome.runtime.getURL('css/content.css');
+    link.href = window.YARH.Utils.api.runtime.getURL('css/content.css');
     this.shadowRoot.appendChild(link);
     return this.shadowRoot;
   },
@@ -45,7 +45,7 @@ window.YARH.UI = {
   },
 
   playSound: function(name) {
-    const audio = new Audio(chrome.runtime.getURL(`audio/${name}.m4a`));
+    const audio = new Audio(window.YARH.Utils.api.runtime.getURL(`audio/${name}.m4a`));
     audio.play().catch(() => {});
   }
 };

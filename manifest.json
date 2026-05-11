@@ -23,8 +23,13 @@
   ],
   "background": {
     "service_worker": "js/worker.js",
-    "scripts": ["js/worker.js"],
-    "type": "module"
+    "scripts": [
+      "js/shared/constants.js",
+      "js/shared/utils.js",
+      "js/background/api.js",
+      "js/background/enrichment.js",
+      "js/worker.js"
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
